@@ -3,17 +3,20 @@ import * as d3 from 'd3';
 
 const STORAGE_KEY = 'bankNetworkPositions';
 const ZONE_POSITIONS_KEY = 'bankNetworkZonePositions';
+const ZOOM_TRANSFORM_KEY = 'bankNetworkZoomTransform';
 
 function BankNetworkGraph({ banks, nostros, payments = [], clock = null }) {
   const svgRef = useRef(null);
   const containerRef = useRef(null);
   const nodePositionsRef = useRef(new Map());
   const zonePositionsRef = useRef(new Map());
+  const zoomTransformRef = useRef(null); // Track current zoom transform
   const [resetTrigger, setResetTrigger] = React.useState(0);
   const [graphHeight, setGraphHeight] = React.useState(350);
   const [isFullscreen, setIsFullscreen] = React.useState(false);
   const processedPaymentsRef = useRef(new Set());
   const animationGroupRef = useRef(null);
+  const previousPaymentStatesRef = useRef(new Map()); // Track previous payment states
 
   const MIN_HEIGHT = 350;
   const HEIGHT_STEP = 30;
@@ -41,6 +44,16 @@ function BankNetworkGraph({ banks, nostros, payments = [], clock = null }) {
     } catch (e) {
       console.warn('Failed to load zone positions:', e);
     }
+
+    try {
+      const storedZoom = localStorage.getItem(ZOOM_TRANSFORM_KEY);
+      if (storedZoom) {
+        const zoomData = JSON.parse(storedZoom);
+        zoomTransformRef.current = d3.zoomIdentity.translate(zoomData.x, zoomData.y).scale(zoomData.k);
+      }
+    } catch (e) {
+      console.warn('Failed to load zoom transform:', e);
+    }
   }, []);
 
   // Guardar posiciones
@@ -63,12 +76,28 @@ function BankNetworkGraph({ banks, nostros, payments = [], clock = null }) {
     }
   }, []);
 
+  // Guardar zoom transform
+  const saveZoomTransform = useCallback((transform) => {
+    try {
+      zoomTransformRef.current = transform;
+      localStorage.setItem(ZOOM_TRANSFORM_KEY, JSON.stringify({
+        x: transform.x,
+        y: transform.y,
+        k: transform.k
+      }));
+    } catch (e) {
+      console.warn('Failed to save zoom transform:', e);
+    }
+  }, []);
+
   // Resetear posiciones
   const resetPositions = useCallback(() => {
     nodePositionsRef.current.clear();
     zonePositionsRef.current.clear();
+    zoomTransformRef.current = null;
     localStorage.removeItem(STORAGE_KEY);
     localStorage.removeItem(ZONE_POSITIONS_KEY);
+    localStorage.removeItem(ZOOM_TRANSFORM_KEY);
     setResetTrigger(prev => prev + 1);
   }, []);
 
@@ -129,7 +158,9 @@ function BankNetworkGraph({ banks, nostros, payments = [], clock = null }) {
       return baseGroupRadius + (extraBanks * 25);
     }
 
-    // Limpiar SVG anterior
+    // Limpiar SVG anterior EXCEPTO el grupo de animaciones
+    const existingAnimations = d3.select(svgRef.current).select('.payment-animations');
+    const animationsNode = existingAnimations.empty() ? null : existingAnimations.node();
     d3.select(svgRef.current).selectAll('*').remove();
 
     const svg = d3
@@ -142,14 +173,25 @@ function BankNetworkGraph({ banks, nostros, payments = [], clock = null }) {
     // Grupo principal con zoom y pan
     const g = svg.append('g');
 
+    // Restaurar animaciones si existían
+    if (animationsNode) {
+      g.node().appendChild(animationsNode);
+    }
+
     // Zoom behavior
     const zoom = d3.zoom()
       .scaleExtent([0.3, 3])
       .on('zoom', (event) => {
         g.attr('transform', event.transform);
+        saveZoomTransform(event.transform);
       });
 
     svg.call(zoom);
+
+    // Restaurar zoom guardado si existe
+    if (zoomTransformRef.current) {
+      svg.call(zoom.transform, zoomTransformRef.current);
+    }
 
     // Calcular posiciones de los grupos (zonas de divisas)
     const currencyGroups = grouped.map(([currency, banksInGroup], idx) => {
@@ -458,11 +500,13 @@ function BankNetworkGraph({ banks, nostros, payments = [], clock = null }) {
     // Posiciones iniciales
     updatePositions();
 
-    // Centrar zoom inicial
-    const initialTransform = d3.zoomIdentity.translate(0, 0).scale(1);
-    svg.call(zoom.transform, initialTransform);
+    // Solo aplicar zoom inicial si no hay zoom guardado
+    if (!zoomTransformRef.current) {
+      const initialTransform = d3.zoomIdentity.translate(0, 0).scale(1);
+      svg.call(zoom.transform, initialTransform);
+    }
 
-  }, [banks, nostros, grouped, edges, loadPositions, savePositions, saveZonePositions, resetTrigger, graphHeight, isFullscreen]);
+  }, [banks, nostros, grouped, edges, loadPositions, savePositions, saveZonePositions, saveZoomTransform, resetTrigger, graphHeight, isFullscreen]);
 
   const animatePaymentRoute = useCallback((animationGroup, route, paymentId) => {
     if (route.length < 2) return;
@@ -513,7 +557,7 @@ function BankNetworkGraph({ banks, nostros, payments = [], clock = null }) {
     animateSegment();
   }, [ANIMATION_DURATION]);
 
-  // Animación de pagos
+  // Animación de pagos - detectar transiciones de estado QUEUED -> EXECUTED/SETTLED
   useEffect(() => {
     if (!svgRef.current || banks.length === 0) return;
 
@@ -530,32 +574,58 @@ function BankNetworkGraph({ banks, nostros, payments = [], clock = null }) {
       animationGroupRef.current = animationGroup.node();
     }
 
-    // Filtrar pagos exitosos que no hemos procesado aún
     const currentSimTime = clock?.simTimeMs;
+    const paymentsToAnimate = [];
 
-    const newPayments = payments.filter(p => {
+    // Detectar pagos que transicionaron de QUEUED a EXECUTED/SETTLED
+    payments.forEach(p => {
+      const previousState = previousPaymentStatesRef.current.get(p.id);
+      const currentState = p.state;
+
+      // Actualizar el estado previo para TODOS los pagos (incluyendo QUEUED)
+      previousPaymentStatesRef.current.set(p.id, currentState);
+
+      // Si es un pago en QUEUED, solo registrar el estado y esperar
+      if (currentState === 'QUEUED') {
+        return;
+      }
+
+      // No animar si ya fue procesado
+      if (processedPaymentsRef.current.has(p.id)) {
+        return;
+      }
+
       // Validaciones básicas
-      if ((p.state !== 'EXECUTED' && p.state !== 'SETTLED') ||
-          processedPaymentsRef.current.has(p.id) ||
-          !p.route ||
-          p.route.length < 2) {
-        return false;
+      if (!p.route || p.route.length < 2) {
+        return;
       }
 
-      // Si tenemos tiempo de simulación, filtrar pagos antiguos
-      if (currentSimTime) {
-        const paymentTime = p.settledAtMs || p.executedAtMs || p.createdAtMs;
-        if (paymentTime && (currentSimTime - paymentTime > TEN_MINUTES_MS)) {
-          // Marcar como procesado para no volver a verificarlo
-          processedPaymentsRef.current.add(p.id);
-          return false;
+      // Detectar transición de QUEUED a EXECUTED o SETTLED
+      const isNewlySettled = previousState === 'QUEUED' && (currentState === 'EXECUTED' || currentState === 'SETTLED');
+
+      // También animar si es un pago nuevo que ya viene en estado EXECUTED/SETTLED
+      // pero solo si es reciente (menos de 10 minutos en tiempo de simulación)
+      const isNewRecentPayment = previousState === undefined && (currentState === 'EXECUTED' || currentState === 'SETTLED');
+
+      if (isNewlySettled) {
+        // Pago que acaba de transicionar - siempre animar
+        paymentsToAnimate.push(p);
+      } else if (isNewRecentPayment) {
+        // Pago nuevo en la lista - verificar si es reciente
+        if (currentSimTime) {
+          const paymentTime = p.settledAtMs || p.executedAtMs || p.createdAtMs;
+          if (paymentTime && (currentSimTime - paymentTime > TEN_MINUTES_MS)) {
+            // Es un pago antiguo, marcar como procesado y no animar
+            processedPaymentsRef.current.add(p.id);
+            return;
+          }
         }
+        paymentsToAnimate.push(p);
       }
-
-      return true;
     });
 
-    newPayments.forEach(payment => {
+    // Animar todos los pagos que deben animarse
+    paymentsToAnimate.forEach(payment => {
       processedPaymentsRef.current.add(payment.id);
       animatePaymentRoute(animationGroup, payment.route, payment.id);
     });
@@ -721,7 +791,8 @@ function BankNetworkGraph({ banks, nostros, payments = [], clock = null }) {
 }
 
 // Memoizar el componente para evitar re-renderizados innecesarios
-// Solo se re-renderizará cuando cambien banks o nostros
+// Se re-renderizará cuando cambien banks, nostros, payments (estructura/estado)
+// NO re-renderiza por cambios de clock solo - el useEffect de animaciones usa refs
 export default React.memo(BankNetworkGraph, (prevProps, nextProps) => {
   // Comparar banks
   if (prevProps.banks.length !== nextProps.banks.length) return false;
@@ -734,6 +805,17 @@ export default React.memo(BankNetworkGraph, (prevProps, nextProps) => {
     n.correspondentBankId !== nextProps.nostros[i]?.correspondentBankId ||
     n.currency !== nextProps.nostros[i]?.currency
   )) return false;
+
+  // Comparar payments (necesario para detectar transiciones de estado)
+  if (prevProps.payments?.length !== nextProps.payments?.length) return false;
+  if (prevProps.payments?.some((p, i) =>
+    p.id !== nextProps.payments[i]?.id ||
+    p.state !== nextProps.payments[i]?.state
+  )) return false;
+
+  // NO comparar clock - usamos clock dentro del useEffect pero no necesitamos
+  // re-render completo del componente por cada tick
+  // El useEffect de animaciones verifica clock.simTimeMs directamente
 
   // Si todo es igual, no re-renderizar
   return true;
