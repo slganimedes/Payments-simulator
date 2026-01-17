@@ -11,6 +11,9 @@ Simulador educativo de pagos internacionales que modela el flujo de transferenci
   - Zonas de divisas arrastrables desde el centro
   - Tamaño dinámico de zonas según número de bancos
   - Conexiones Nostro/Vostro visualizadas
+  - Zoom y pan con persistencia de estado
+  - Controles de tamaño (+/-) y modo pantalla completa
+  - **Animaciones de pagos**: Visualización en tiempo real del flujo de pagos entre bancos
 - **Pagos transfronterizos**: Simulación completa del ciclo de vida de pagos internacionales
 - **Conversión de divisas (FX)**: Sistema de tipos de cambio con pivot en USD (7 divisas)
 - **Cuentas Nostro/Vostro**: Implementación del modelo de cuentas interbancarias
@@ -282,7 +285,20 @@ Este proyecto es de uso educativo.
 
 ## Versión
 
-**Versión 1.0** - Enero 2026
+**Versión 1.1** - Enero 2026
+
+### Características de la versión 1.1
+- **Animaciones de pagos en el grafo**: Cuando un pago se liquida, una bolita animada recorre la ruta entre bancos
+  - Detecta transiciones QUEUED → SETTLED para activar animaciones
+  - Múltiples pagos animados simultáneamente cuando la ventana de clearing procesa la cola
+  - Filtro de pagos antiguos (>10 min en tiempo de simulación) para evitar animaciones en recarga
+- **Persistencia de zoom/pan**: El estado de zoom y posición del grafo se guarda en localStorage
+- **Controles del grafo**: Botones +/- para ajustar altura y modo pantalla completa
+- **Validaciones mejoradas de pagos**:
+  - Solo clientes REGULAR pueden hacer pagos
+  - Validación de balance > 0 en la divisa de débito
+  - Validación de disponibilidad de divisa en banco destino
+- **Mensajes de error mejorados** para restricciones de Nostro
 
 ### Características de la versión 1.0
 - Sistema completo de pagos internacionales con red de corresponsalía
