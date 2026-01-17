@@ -1,0 +1,25 @@
+{
+  "name": "payment-simulator",
+  "private": true,
+  "type": "module",
+  "version": "0.1.0",
+  "scripts": {
+    "dev": "node server/dev.js",
+    "build": "vite build",
+    "start": "node server/prod.js"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.7.0",
+    "d3": "^7.9.0",
+    "decimal.js": "^10.4.3",
+    "express": "^4.19.2",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^6.26.2",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.2",
+    "vite": "^5.4.10"
+  }
+}
