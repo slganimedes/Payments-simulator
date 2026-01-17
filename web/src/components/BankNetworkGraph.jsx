@@ -4,7 +4,7 @@ import * as d3 from 'd3';
 const STORAGE_KEY = 'bankNetworkPositions';
 const ZONE_POSITIONS_KEY = 'bankNetworkZonePositions';
 
-function BankNetworkGraph({ banks, nostros }) {
+function BankNetworkGraph({ banks, nostros, payments = [] }) {
   const svgRef = useRef(null);
   const containerRef = useRef(null);
   const nodePositionsRef = useRef(new Map());
@@ -12,9 +12,12 @@ function BankNetworkGraph({ banks, nostros }) {
   const [resetTrigger, setResetTrigger] = React.useState(0);
   const [graphHeight, setGraphHeight] = React.useState(350);
   const [isFullscreen, setIsFullscreen] = React.useState(false);
+  const processedPaymentsRef = useRef(new Set());
+  const animationGroupRef = useRef(null);
 
   const MIN_HEIGHT = 350;
   const HEIGHT_STEP = 30;
+  const ANIMATION_DURATION = 3000; // 3 segundos por segmento
 
   // Cargar posiciones guardadas
   const loadPositions = useCallback(() => {
@@ -459,6 +462,83 @@ function BankNetworkGraph({ banks, nostros }) {
     svg.call(zoom.transform, initialTransform);
 
   }, [banks, nostros, grouped, edges, loadPositions, savePositions, saveZonePositions, resetTrigger, graphHeight, isFullscreen]);
+
+  // Animación de pagos
+  useEffect(() => {
+    if (!svgRef.current || banks.length === 0) return;
+
+    const svg = d3.select(svgRef.current);
+
+    // Crear grupo para animaciones si no existe
+    if (!animationGroupRef.current) {
+      animationGroupRef.current = svg.select('g').append('g').attr('class', 'payment-animations');
+    }
+
+    const animationGroup = d3.select(animationGroupRef.current);
+
+    // Filtrar pagos exitosos que no hemos procesado aún
+    const newPayments = payments.filter(p =>
+      (p.state === 'EXECUTED' || p.state === 'SETTLED') &&
+      !processedPaymentsRef.current.has(p.id) &&
+      p.route &&
+      p.route.length > 1
+    );
+
+    newPayments.forEach(payment => {
+      processedPaymentsRef.current.add(payment.id);
+      animatePaymentRoute(animationGroup, payment.route, payment.id);
+    });
+
+  }, [payments, banks]);
+
+  const animatePaymentRoute = (animationGroup, route, paymentId) => {
+    if (route.length < 2) return;
+
+    const totalSegments = route.length - 1;
+    let currentSegment = 0;
+
+    const animateSegment = () => {
+      if (currentSegment >= totalSegments) return;
+
+      const fromBankId = route[currentSegment];
+      const toBankId = route[currentSegment + 1];
+
+      const fromPos = nodePositionsRef.current.get(fromBankId);
+      const toPos = nodePositionsRef.current.get(toBankId);
+
+      if (!fromPos || !toPos) {
+        currentSegment++;
+        animateSegment();
+        return;
+      }
+
+      // Crear círculo animado
+      const circle = animationGroup
+        .append('circle')
+        .attr('r', 6)
+        .attr('cx', fromPos.x)
+        .attr('cy', fromPos.y)
+        .attr('fill', '#3b82f6')
+        .attr('stroke', '#60a5fa')
+        .attr('stroke-width', 2)
+        .style('filter', 'drop-shadow(0 0 6px rgba(59, 130, 246, 0.8))');
+
+      // Animar el movimiento
+      circle
+        .transition()
+        .duration(ANIMATION_DURATION)
+        .ease(d3.easeLinear)
+        .attr('cx', toPos.x)
+        .attr('cy', toPos.y)
+        .on('end', () => {
+          circle.remove();
+          currentSegment++;
+          animateSegment();
+        });
+    };
+
+    animateSegment();
+  };
 
   const handleIncreaseHeight = () => {
     setGraphHeight(prev => prev + HEIGHT_STEP);

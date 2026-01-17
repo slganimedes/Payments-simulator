@@ -165,7 +165,7 @@ export default function Dashboard() {
       <div className="dashboard-left">
         <section className="card">
           <h2>Correspondent network</h2>
-          <BankNetworkGraph banks={banks} nostros={nostros} />
+          <BankNetworkGraph banks={banks} nostros={nostros} payments={payments} />
         </section>
 
         <div className="dashboard-bottom">
