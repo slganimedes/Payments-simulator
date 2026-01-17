@@ -4,13 +4,20 @@ Simulador educativo de pagos internacionales que modela el flujo de transferenci
 
 ## Características
 
-- **Red de bancos corresponsales**: Visualización interactiva de la red de bancos agrupados por moneda base
+- **Red de bancos corresponsales**: Visualización interactiva D3.js con grafo de bancos agrupados por moneda base
+  - Nodos arrastrables con persistencia en localStorage
+  - Zonas de divisas arrastrables desde el centro
+  - Tamaño dinámico de zonas según número de bancos
+  - Conexiones Nostro/Vostro visualizadas
 - **Pagos transfronterizos**: Simulación completa del ciclo de vida de pagos internacionales
-- **Conversión de divisas (FX)**: Sistema de tipos de cambio con pivot en USD
+- **Conversión de divisas (FX)**: Sistema de tipos de cambio con pivot en USD (7 divisas)
 - **Cuentas Nostro/Vostro**: Implementación del modelo de cuentas interbancarias
-- **Horarios de clearing**: Simulación de ventanas de liquidación por moneda
+- **Horarios de clearing**: Simulación de ventanas de liquidación por moneda con zona horaria CET
 - **Motor de enrutamiento**: Encuentra rutas óptimas entre bancos para liquidación
-- **Reloj simulado**: Control del tiempo de simulación independiente del tiempo real
+- **Reloj simulado**: Sistema tick-based con control de velocidad (pause/play/faster/slower)
+  - Tiempo simulado independiente del tiempo real
+  - Velocidad ajustable (x60, x120, x240, etc.)
+  - Visualización en formato CET
 
 ## Estructura del proyecto
 
@@ -26,19 +33,25 @@ Payments Simulator/
 │   │   ├── balances.js  # Gestión de saldos
 │   │   ├── accounts.js  # Bancos y clientes
 │   │   ├── money.js     # Precisión decimal
-│   │   ├── clock.js     # Tiempo simulado
+│   │   ├── clock.js     # Tiempo simulado (tick-based)
 │   │   ├── ids.js       # Generación de IDs
 │   │   └── invariants.js # Validaciones
 │   ├── app.js          # Express app
+│   ├── api.js          # API endpoints
 │   ├── engine.js       # Motor de procesamiento
+│   ├── config.js       # Configuración (divisas, FX, horarios)
 │   └── db.js           # Base de datos SQLite
 ├── web/
 │   └── src/
+│       ├── components/
+│       │   └── BankNetworkGraph.jsx  # Grafo D3.js interactivo
 │       ├── pages/
 │       │   ├── Dashboard.jsx    # Red y pagos
 │       │   ├── BankDetails.jsx  # Detalles de bancos
 │       │   ├── Payments.jsx     # Crear pagos
 │       │   └── FX.jsx           # Tipos de cambio
+│       ├── layout/
+│       │   └── RootLayout.jsx   # Layout principal con reloj
 │       ├── App.jsx
 │       └── api.js
 └── data/                # Base de datos SQLite
@@ -55,7 +68,8 @@ Payments Simulator/
 ### Frontend
 - **React 18** + **Vite**: Interfaz de usuario
 - **React Router**: Navegación
-- **SVG**: Visualización de red de bancos
+- **D3.js v7**: Visualización interactiva de red de bancos (grafo con drag & drop)
+- **SVG**: Renderizado de gráficos
 
 ## Instalación
 
@@ -78,7 +92,7 @@ npm run build  # Construye el frontend
 npm start      # Inicia el servidor de producción
 ```
 
-La aplicación estará disponible en `http://localhost:3000`
+La aplicación estará disponible en `http://localhost:10100`
 
 ## Conceptos clave
 
@@ -109,21 +123,66 @@ Un motor automático procesa pagos en cola cada 500ms:
 - Ejecuta transacciones de forma atómica
 - Registra mensajes de auditoría en cada paso
 
+## Configuración
+
+La configuración principal está en `server/config.js`:
+
+```javascript
+// Puerto del servidor
+export const SERVER_PORT = 10100;
+
+// Archivo de base de datos
+export const DB_FILE_PATH = '../data/payment-simulator.sqlite';
+
+// Divisas soportadas
+export const SUPPORTED_CURRENCIES = ['USD', 'EUR', 'GBP', 'CHF', 'JPY', 'MXN', 'HKD'];
+
+// Tipos de cambio con USD como pivot
+export const FX_USD_PIVOT_RATES = {
+  EUR: '0.85',
+  GBP: '0.77',
+  CHF: '0.95',
+  JPY: '150',
+  HKD: '7.80',
+  MXN: '20.00'
+};
+
+// Horarios de clearing en CET
+export const CLEARING_HOURS = {
+  USD: { openHour: 13, closeHour: 22 },
+  EUR: { openHour: 8, closeHour: 17 },
+  GBP: { openHour: 7, closeHour: 16 },
+  CHF: { openHour: 8, closeHour: 17 },
+  JPY: { openHour: 0, closeHour: 9 },
+  HKD: { openHour: 0, closeHour: 9 },
+  MXN: { openHour: 14, closeHour: 23 }
+};
+
+// Época de simulación (1 enero 2026, 09:00 UTC)
+export const SIM_EPOCH_MS = Date.UTC(2026, 0, 1, 9, 0, 0);
+```
+
 ## API Endpoints
 
 ```
 GET  /api/banks           # Lista todos los bancos
 POST /api/banks           # Crea un nuevo banco
 GET  /api/clients         # Lista todos los clientes
-POST /api/clients         # Crea un nuevo cliente
+POST /api/banks/:id/clients  # Crea cliente en un banco
 GET  /api/nostros         # Lista cuentas Nostro
-POST /api/nostros         # Crea cuenta Nostro
+POST /api/correspondents/nostro  # Crea cuenta Nostro + Vostro espejo
 GET  /api/payments        # Lista todos los pagos
 POST /api/payments        # Crea intención de pago
 GET  /api/fx              # Tipos de cambio actuales
+GET  /api/fx-history      # Historial de conversiones FX
 GET  /api/clearing-hours  # Horarios de clearing
 GET  /api/clock           # Tiempo de simulación actual
-POST /api/clock/advance   # Avanza el tiempo simulado
+POST /api/admin/clock/pause   # Pausa el reloj
+POST /api/admin/clock/play    # Reanuda el reloj
+POST /api/admin/clock/faster  # Acelera el reloj (x2)
+POST /api/admin/clock/slower  # Desacelera el reloj (/2)
+POST /api/admin/reset         # Reinicia toda la simulación
+POST /api/admin/reset-clock   # Reinicia solo el reloj
 ```
 
 ## Estados de pago
@@ -140,7 +199,39 @@ POST /api/clock/advance   # Avanza el tiempo simulado
 - GBP (Libra esterlina)
 - CHF (Franco suizo)
 - JPY (Yen japonés)
+- HKD (Dólar de Hong Kong)
 - MXN (Peso mexicano)
+
+### Tipos de cambio (USD como pivot)
+
+Los tipos de cambio están configurados en `server/config.js`:
+
+```javascript
+FX_USD_PIVOT_RATES = {
+  EUR: '0.85',
+  GBP: '0.77',
+  CHF: '0.95',
+  JPY: '150',
+  HKD: '7.80',
+  MXN: '20.00'
+}
+```
+
+### Horarios de clearing (CET)
+
+Cada divisa tiene horarios de liquidación específicos configurados en `server/config.js`:
+
+```javascript
+CLEARING_HOURS = {
+  USD: { openHour: 13, closeHour: 22 },  // 13:00-22:00 CET
+  EUR: { openHour: 8, closeHour: 17 },   // 08:00-17:00 CET
+  GBP: { openHour: 7, closeHour: 16 },   // 07:00-16:00 CET
+  CHF: { openHour: 8, closeHour: 17 },   // 08:00-17:00 CET
+  JPY: { openHour: 0, closeHour: 9 },    // 00:00-09:00 CET
+  HKD: { openHour: 0, closeHour: 9 },    // 00:00-09:00 CET
+  MXN: { openHour: 14, closeHour: 23 }   // 14:00-23:00 CET
+}
+```
 
 ## Casos de uso educativos
 
