@@ -3,9 +3,9 @@ import { convert, fxLogEvent } from './fx.js';
 import { d, toMoneyString } from './money.js';
 import { applyRegularClientDelta, applyRegularClientDeltaClientOnly } from './balances.js';
 import { findMinimumHopRoute } from './routing.js';
-import { validateClientCurrencyAvailability } from './invariants.js';
+import { validateClientCurrencyAvailability, getBankAvailableCurrencies } from './invariants.js';
 import { newId } from './ids.js';
-import { getBank } from './accounts.js';
+import { getBank, getClientBalance } from './accounts.js';
 import { getNostro, adjustNostroAndMirrorVostro } from './nostroVostro.js';
 
 export function listPayments(db) {
@@ -37,10 +37,27 @@ export function createPaymentIntent(db, payload) {
   if (!fromClient || !toClient) throw new Error('Client not found');
   if (fromClient.type !== 'REGULAR' || toClient.type !== 'REGULAR') throw new Error('Payments must be between regular clients');
 
+  // Validate: fromClient must have balance > 0 in debit currency
+  const fromBalance = getClientBalance(db, fromClient.id, payload.debitCurrency);
+  if (fromBalance.lte(0)) {
+    throw new Error(`Client has no funds in ${payload.debitCurrency}. Current balance: ${toMoneyString(fromBalance)}`);
+  }
+
   const toBank = db.prepare('SELECT id, baseCurrency FROM banks WHERE id = ?').get(toClient.bankId);
   if (!toBank) throw new Error('Beneficiary bank not found');
 
+  // Validate: debit currency available at origin bank
   validateClientCurrencyAvailability(db, fromClient.id, payload.debitCurrency);
+
+  // Validate: credit currency available at destination bank
+  const toAvailableCurrencies = getBankAvailableCurrencies(db, toClient.bankId);
+  if (!toAvailableCurrencies.currencies.includes(payload.creditCurrency)) {
+    throw new Error(
+      `Currency ${payload.creditCurrency} is not available at destination bank ${toClient.bankId}. ` +
+      `Available currencies: ${toAvailableCurrencies.currencies.join(', ')}`
+    );
+  }
+
   validateClientCurrencyAvailability(db, toClient.id, payload.creditCurrency);
 
   const fromBank = getBank(db, fromClient.bankId);

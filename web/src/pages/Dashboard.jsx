@@ -87,41 +87,46 @@ export default function Dashboard() {
 
   const bankTotals = useMemo(() => {
     const totals = new Map();
-    for (const b of banks) {
-      const currencySet = new Set([b.baseCurrency]);
-      const nset = nostroCurrenciesByBankId.get(b.id);
-      if (nset) for (const cur of nset) currencySet.add(cur);
-      const nlist = nostrosByOwnerBankId.get(b.id);
-      if (nlist) for (const x of nlist) currencySet.add(x.currency);
 
-      for (const c of clientsAtBanks) {
-        if (c.bankId !== b.id) continue;
-        for (const bal of c.balances ?? []) currencySet.add(bal.currency);
+    for (const b of banks) {
+      // Identificar divisas disponibles
+      const currencySet = new Set([b.baseCurrency]);
+
+      // Añadir divisas de Nostros (indica disponibilidad)
+      const nlist = nostrosByOwnerBankId.get(b.id);
+      if (nlist) {
+        for (const n of nlist) currencySet.add(n.currency);
       }
 
-      const map = new Map();
-      for (const cur of currencySet) map.set(cur, 0);
-
+      // Añadir divisas de clientes
       for (const c of clientsAtBanks) {
         if (c.bankId !== b.id) continue;
         for (const bal of c.balances ?? []) {
-          if (!map.has(bal.currency)) continue;
-          map.set(bal.currency, (map.get(bal.currency) ?? 0) + Number(bal.amount));
+          currencySet.add(bal.currency);
         }
       }
 
-      for (const n of nlist ?? []) {
-        if (!map.has(n.currency)) map.set(n.currency, 0);
-        map.set(n.currency, (map.get(n.currency) ?? 0) + Number(n.balance));
+      // Calcular balances totales SOLO de clientes (REGULAR + VOSTRO)
+      const balanceMap = new Map();
+      for (const cur of currencySet) {
+        let total = 0;
+        for (const c of clientsAtBanks) {
+          if (c.bankId !== b.id) continue;
+          // Suma TODOS los clientes del banco (REGULAR y VOSTRO)
+          const balance = c.balances?.find(bal => bal.currency === cur);
+          if (balance) total += Number(balance.amount);
+        }
+        balanceMap.set(cur, total);
       }
 
       totals.set(b.id, {
         currencies: Array.from(currencySet).sort((a, b) => String(a).localeCompare(String(b))),
-        totals: map
+        totals: balanceMap
       });
     }
+
     return totals;
-  }, [banks, nostroCurrenciesByBankId, nostrosByOwnerBankId, clientsAtBanks]);
+  }, [banks, nostrosByOwnerBankId, clientsAtBanks]);
 
   const simHourCET = useMemo(() => {
     if (!clock?.simTimeMs) return null;
@@ -237,14 +242,25 @@ export default function Dashboard() {
       <div className="dashboard-right">
         <section className="card">
           <h2>Clearing hours</h2>
-          <div className="table table-vertical">
+          <div style={{ display: 'grid', gap: '8px' }}>
             {clearing.map((c) => {
               const open = isOpen(c.openHour, c.closeHour, simHourCET);
               return (
-                <div className="row" key={c.currency}>
-                  <div className="cell"><b>{c.currency}</b></div>
-                  <div className="cell">
-                    {String(c.openHour).padStart(2, '0')}:00 - {String(c.closeHour).padStart(2, '0')}:00 CET{' '}
+                <div key={c.currency} style={{
+                  border: '1px solid var(--border)',
+                  borderRadius: '8px',
+                  padding: '12px',
+                  fontSize: '14px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '6px',
+                  background: 'rgba(15, 23, 42, 0.4)'
+                }}>
+                  <div style={{ fontWeight: '700', fontSize: '15px' }}>{c.currency}</div>
+                  <div style={{ fontWeight: '600', fontSize: '13px', color: 'var(--muted)' }}>
+                    {String(c.openHour).padStart(2, '0')}:00 - {String(c.closeHour).padStart(2, '0')}:00
+                  </div>
+                  <div>
                     {open == null ? <span className="badge">—</span> : open ? <span className="badge badge-open">ABIERTA</span> : <span className="badge badge-closed">CERRADA</span>}
                   </div>
                 </div>
@@ -255,14 +271,14 @@ export default function Dashboard() {
 
         <section className="card">
           <h2>FX rates</h2>
-          <div className="table table-vertical">
+          <div style={{ display: 'grid', gap: '6px' }}>
             {currencies.map((c) => {
               const r = fx.find((x) => x.quoteCurrency === c);
               if (!r) return null;
               return (
-                <div className="row" key={c}>
-                  <div className="cell"><b>USD/{c}</b></div>
-                  <div className="cell">{r.rate}</div>
+                <div key={c} className="badge" style={{ padding: '8px 10px', fontSize: '12px', display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ fontWeight: '700' }}>USD/{c}</span>
+                  <span style={{ fontWeight: '600' }}>{r.rate}</span>
                 </div>
               );
             })}

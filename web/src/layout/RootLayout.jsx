@@ -83,6 +83,12 @@ export default function RootLayout() {
     }
   }
 
+  function onResetPositions() {
+    localStorage.removeItem('bankNetworkPositions');
+    localStorage.removeItem('bankNetworkZonePositions');
+    window.location.reload();
+  }
+
   const isPaused = clock?.isPaused ?? false;
 
   return (
@@ -114,17 +120,18 @@ export default function RootLayout() {
           <NavLink className="nav-item" to="/payments">Payments</NavLink>
           <NavLink className="nav-item" to="/fx">FX</NavLink>
         </nav>
+
+        <div style={{ marginTop: 'auto', paddingTop: '16px' }}>
+          <div style={{ display: 'grid', gap: '8px' }}>
+            <button className="btn" onClick={onResetPositions} style={{ width: '100%' }}>Reset Positions</button>
+            <button className="btn" onClick={onResetClock} style={{ width: '100%' }}>Reset Clock</button>
+            <button className="btn btn-danger" onClick={onResetAll} style={{ width: '100%' }}>RESET ALL</button>
+          </div>
+        </div>
       </aside>
 
       <main className="main">
-        <header className="topbar">
-          <div className="admin">
-            <button className="btn" onClick={onResetClock}>Reset clock</button>
-            <button className="btn btn-danger" onClick={onResetAll}>RESET ALL</button>
-          </div>
-        </header>
-
-        {error ? <div className="error">{error}</div> : null}
+        {error ? <div className="error" style={{ margin: '16px' }}>{error}</div> : null}
 
         <div className="page">
           <Outlet />

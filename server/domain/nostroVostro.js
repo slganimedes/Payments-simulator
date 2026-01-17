@@ -37,8 +37,14 @@ export function createNostroWithMirrorVostro(db, { ownerBankId, correspondentBan
   const currency = corr.baseCurrency;
   if (currency === owner.baseCurrency) throw new Error('A bank cannot open a Nostro in its own base currency');
 
-  const existing = db.prepare('SELECT 1 FROM nostros WHERE ownerBankId = ? AND currency = ?').get(ownerBankId, currency);
-  if (existing) throw new Error(`Nostro already exists for ${currency}`);
+  const existing = db.prepare('SELECT correspondentBankId FROM nostros WHERE ownerBankId = ? AND currency = ?').get(ownerBankId, currency);
+  if (existing) {
+    throw new Error(
+      `Bank ${ownerBankId} already has a correspondent for currency ${currency} ` +
+      `(current correspondent: ${existing.correspondentBankId}). ` +
+      `Only one correspondent per currency is allowed.`
+    );
+  }
 
   const vostroClient = getOrCreateVostroClient(db, { hostBankId: correspondentBankId, foreignBankId: ownerBankId, createdAtMs });
 

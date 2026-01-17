@@ -106,8 +106,8 @@ function BankNetworkGraph({ banks, nostros }) {
     loadPositions();
 
     const width = 800;
-    const height = 300;
-    const baseGroupRadius = 100; // Radio base para los primeros 3 bancos (reducido)
+    const height = 350;
+    const baseGroupRadius = 110; // Radio base para los primeros 3 bancos
     const bankRadius = 15;
 
     // Función para calcular el radio de la zona según el número de bancos
@@ -146,8 +146,8 @@ function BankNetworkGraph({ banks, nostros }) {
     const currencyGroups = grouped.map(([currency, banksInGroup], idx) => {
       const angle = (2 * Math.PI * idx) / Math.max(1, grouped.length);
       const groupRadius = calculateGroupRadius(banksInGroup.length);
-      const defaultCx = width / 2 + 150 * Math.cos(angle);
-      const defaultCy = height / 2 + 100 * Math.sin(angle);
+      const defaultCx = width / 2 + 160 * Math.cos(angle);
+      const defaultCy = height / 2 + 120 * Math.sin(angle);
 
       // Usar posición guardada si existe
       const savedZonePos = zonePositionsRef.current.get(currency);
@@ -456,7 +456,7 @@ function BankNetworkGraph({ banks, nostros }) {
   }, [banks, nostros, grouped, edges, loadPositions, savePositions, saveZonePositions, resetTrigger]);
 
   return (
-    <div ref={containerRef} style={{ width: '100%', height: '300px', background: '#0f172a', borderRadius: '8px', position: 'relative', overflow: 'hidden' }}>
+    <div ref={containerRef} style={{ width: '100%', height: '350px', background: '#0f172a', borderRadius: '8px', position: 'relative', overflow: 'hidden' }}>
       <div
         style={{
           position: 'absolute',
@@ -474,28 +474,6 @@ function BankNetworkGraph({ banks, nostros }) {
         }}
       />
       <svg ref={svgRef} style={{ display: 'block', position: 'relative', zIndex: 1 }} />
-      <button
-        onClick={resetPositions}
-        style={{
-          position: 'absolute',
-          top: '10px',
-          right: '10px',
-          padding: '8px 12px',
-          background: '#1e293b',
-          color: '#e2e8f0',
-          border: '1px solid #475569',
-          borderRadius: '4px',
-          cursor: 'pointer',
-          fontSize: '12px',
-          fontWeight: '500',
-          zIndex: 10
-        }}
-        onMouseEnter={(e) => e.target.style.background = '#334155'}
-        onMouseLeave={(e) => e.target.style.background = '#1e293b'}
-        title="Reset node positions to default"
-      >
-        Reset Positions
-      </button>
     </div>
   );
 }
