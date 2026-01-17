@@ -106,9 +106,9 @@ function BankNetworkGraph({ banks, nostros }) {
     loadPositions();
 
     const width = 800;
-    const height = 600;
-    const baseGroupRadius = 140; // Radio base para los primeros 3 bancos
-    const bankRadius = 20;
+    const height = 300;
+    const baseGroupRadius = 100; // Radio base para los primeros 3 bancos (reducido)
+    const bankRadius = 15;
 
     // Función para calcular el radio de la zona según el número de bancos
     function calculateGroupRadius(numBanks) {
@@ -146,8 +146,8 @@ function BankNetworkGraph({ banks, nostros }) {
     const currencyGroups = grouped.map(([currency, banksInGroup], idx) => {
       const angle = (2 * Math.PI * idx) / Math.max(1, grouped.length);
       const groupRadius = calculateGroupRadius(banksInGroup.length);
-      const defaultCx = width / 2 + 200 * Math.cos(angle);
-      const defaultCy = height / 2 + 180 * Math.sin(angle);
+      const defaultCx = width / 2 + 150 * Math.cos(angle);
+      const defaultCy = height / 2 + 100 * Math.sin(angle);
 
       // Usar posición guardada si existe
       const savedZonePos = zonePositionsRef.current.get(currency);
@@ -456,8 +456,24 @@ function BankNetworkGraph({ banks, nostros }) {
   }, [banks, nostros, grouped, edges, loadPositions, savePositions, saveZonePositions, resetTrigger]);
 
   return (
-    <div ref={containerRef} style={{ width: '100%', height: '600px', background: '#0f172a', borderRadius: '8px', position: 'relative' }}>
-      <svg ref={svgRef} style={{ display: 'block' }} />
+    <div ref={containerRef} style={{ width: '100%', height: '300px', background: '#0f172a', borderRadius: '8px', position: 'relative', overflow: 'hidden' }}>
+      <div
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          backgroundImage: 'url(/World_background.png)',
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundRepeat: 'no-repeat',
+          opacity: 0.3,
+          pointerEvents: 'none',
+          zIndex: 0
+        }}
+      />
+      <svg ref={svgRef} style={{ display: 'block', position: 'relative', zIndex: 1 }} />
       <button
         onClick={resetPositions}
         style={{

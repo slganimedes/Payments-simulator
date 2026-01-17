@@ -2,6 +2,8 @@
 
 Simulador educativo de pagos internacionales que modela el flujo de transferencias entre bancos, conversiones de divisas y liquidación a través de redes de corresponsalía.
 
+![Payment Simulator Dashboard](./Example.png)
+
 ## Características
 
 - **Red de bancos corresponsales**: Visualización interactiva D3.js con grafo de bancos agrupados por moneda base

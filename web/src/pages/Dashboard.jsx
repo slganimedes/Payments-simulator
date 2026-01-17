@@ -157,113 +157,115 @@ export default function Dashboard() {
 
   return (
     <div className="dashboard">
-      <section className="card">
-        <h2>Correspondent network</h2>
-        <BankNetworkGraph banks={banks} nostros={nostros} />
-      </section>
-
-      <div className="dashboard-bottom">
+      <div className="dashboard-left">
         <section className="card">
-          <h2>Banks</h2>
+          <h2>Correspondent network</h2>
+          <BankNetworkGraph banks={banks} nostros={nostros} />
+        </section>
 
-          <div className="list">
-            {banks.length === 0 ? <div className="muted">No banks yet.</div> : null}
-            {banks.map((b) => (
-              <div key={b.id} className="list-item bank-item">
-                <div className="list-title">
-                  {b.name} <span className="muted">({b.baseCurrency})</span>
+        <div className="dashboard-bottom">
+          <section className="card">
+            <h2>Banks</h2>
+
+            <div className="list">
+              {banks.length === 0 ? <div className="muted">No banks yet.</div> : null}
+              {banks.map((b) => (
+                <div key={b.id} className="list-item bank-item">
+                  <div className="list-title">
+                    {b.name} <span className="muted">({b.baseCurrency})</span>
+                  </div>
+                  <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginTop: '8px' }}>
+                    {(bankTotals.get(b.id)?.currencies ?? [b.baseCurrency]).map((cur) => (
+                      <div key={cur} className="badge" style={{ padding: '8px 12px', fontSize: '18px' }}>
+                        <span style={{ fontWeight: '700' }}>{cur}</span>
+                        {' '}
+                        <span style={{ fontWeight: '650' }}>{Number(bankTotals.get(b.id)?.totals?.get(cur) ?? 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-                <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginTop: '8px' }}>
-                  {(bankTotals.get(b.id)?.currencies ?? [b.baseCurrency]).map((cur) => (
-                    <div key={cur} className="badge" style={{ padding: '8px 12px', fontSize: '18px' }}>
-                      <span style={{ fontWeight: '700' }}>{cur}</span>
-                      {' '}
-                      <span style={{ fontWeight: '650' }}>{Number(bankTotals.get(b.id)?.totals?.get(cur) ?? 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+              ))}
+            </div>
+
+            <form className="form" onSubmit={onCreateBank} style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginTop: '1rem' }}>
+              <input
+                placeholder="Bank name"
+                value={form.name}
+                onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+                style={{ flex: '1' }}
+              />
+              <select value={form.baseCurrency} onChange={(e) => setForm((f) => ({ ...f, baseCurrency: e.target.value }))}>
+                {['USD', 'EUR', 'GBP', 'CHF', 'JPY', 'MXN'].map((c) => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
+              </select>
+              <button className="btn" type="submit">Create bank</button>
+            </form>
+
+            {error ? <div className="error">{error}</div> : null}
+          </section>
+
+          <section className="card">
+            <h2>Payments</h2>
+            {paymentsByCreditCurrency.length === 0 ? <div className="muted">No payments yet.</div> : null}
+            <div className="columns">
+              {paymentsByCreditCurrency.map(([currency, list]) => (
+                <div className="column" key={currency}>
+                  <div className="column-title">{currency}</div>
+                  {list.map((p) => (
+                    <div className="payment" key={p.id}>
+                      <div className="payment-top">
+                        <div className={`state state-${p.state.toLowerCase()}`}>{p.state}</div>
+                        <div className="muted">{new Date(p.createdAtMs).toLocaleTimeString()}</div>
+                      </div>
+                      <div className="payment-body">
+                        <div><b>{p.creditAmount.toFixed(2)} {p.creditCurrency}</b></div>
+                        <div className="muted">Debit: {p.debitAmount.toFixed(2)} {p.debitCurrency}</div>
+                        <div className="muted">Settlement: {p.settlementCurrency}</div>
+                        <div className="muted">Route: {p.route?.length ? p.route.map((id) => bankNameById.get(id) ?? id).join(' -> ') : '—'}</div>
+                        {p.failReason ? <div className="error">{p.failReason}</div> : null}
+                      </div>
                     </div>
                   ))}
                 </div>
-              </div>
-            ))}
-          </div>
-
-          <form className="form" onSubmit={onCreateBank} style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginTop: '1rem' }}>
-            <input
-              placeholder="Bank name"
-              value={form.name}
-              onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-              style={{ flex: '1' }}
-            />
-            <select value={form.baseCurrency} onChange={(e) => setForm((f) => ({ ...f, baseCurrency: e.target.value }))}>
-              {['USD', 'EUR', 'GBP', 'CHF', 'JPY', 'MXN'].map((c) => (
-                <option key={c} value={c}>{c}</option>
               ))}
-            </select>
-            <button className="btn" type="submit">Create bank</button>
-          </form>
+            </div>
+          </section>
+        </div>
+      </div>
 
-          {error ? <div className="error">{error}</div> : null}
+      <div className="dashboard-right">
+        <section className="card">
+          <h2>Clearing hours</h2>
+          <div className="table table-vertical">
+            {clearing.map((c) => {
+              const open = isOpen(c.openHour, c.closeHour, simHourCET);
+              return (
+                <div className="row" key={c.currency}>
+                  <div className="cell"><b>{c.currency}</b></div>
+                  <div className="cell">
+                    {String(c.openHour).padStart(2, '0')}:00 - {String(c.closeHour).padStart(2, '0')}:00 CET{' '}
+                    {open == null ? <span className="badge">—</span> : open ? <span className="badge badge-open">ABIERTA</span> : <span className="badge badge-closed">CERRADA</span>}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </section>
 
         <section className="card">
-          <div className="subgrid">
-            <div>
-              <h3>Clearing hours</h3>
-              <div className="table">
-                {clearing.map((c) => {
-                  const open = isOpen(c.openHour, c.closeHour, simHourCET);
-                  return (
-                    <div className="row" key={c.currency}>
-                      <div className="cell"><b>{c.currency}</b></div>
-                      <div className="cell">
-                        {String(c.openHour).padStart(2, '0')}:00 - {String(c.closeHour).padStart(2, '0')}:00 CET{' '}
-                        {open == null ? <span className="badge">—</span> : open ? <span className="badge badge-open">ABIERTA</span> : <span className="badge badge-closed">CERRADA</span>}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            <div>
-              <h3>FX rates (USD pivot)</h3>
-              <div className="table">
-                {currencies.map((c) => {
-                  const r = fx.find((x) => x.quoteCurrency === c);
-                  if (!r) return null;
-                  return (
-                    <div className="row" key={c}>
-                      <div className="cell"><b>USD/{c}</b></div>
-                      <div className="cell">{r.rate}</div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-
-          <h3>Payments</h3>
-          {paymentsByCreditCurrency.length === 0 ? <div className="muted">No payments yet.</div> : null}
-          <div className="columns">
-            {paymentsByCreditCurrency.map(([currency, list]) => (
-              <div className="column" key={currency}>
-                <div className="column-title">{currency}</div>
-                {list.map((p) => (
-                  <div className="payment" key={p.id}>
-                    <div className="payment-top">
-                      <div className={`state state-${p.state.toLowerCase()}`}>{p.state}</div>
-                      <div className="muted">{new Date(p.createdAtMs).toLocaleTimeString()}</div>
-                    </div>
-                    <div className="payment-body">
-                      <div><b>{p.creditAmount.toFixed(2)} {p.creditCurrency}</b></div>
-                      <div className="muted">Debit: {p.debitAmount.toFixed(2)} {p.debitCurrency}</div>
-                      <div className="muted">Settlement: {p.settlementCurrency}</div>
-                      <div className="muted">Route: {p.route?.length ? p.route.map((id) => bankNameById.get(id) ?? id).join(' -> ') : '—'}</div>
-                      {p.failReason ? <div className="error">{p.failReason}</div> : null}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ))}
+          <h2>FX rates</h2>
+          <div className="table table-vertical">
+            {currencies.map((c) => {
+              const r = fx.find((x) => x.quoteCurrency === c);
+              if (!r) return null;
+              return (
+                <div className="row" key={c}>
+                  <div className="cell"><b>USD/{c}</b></div>
+                  <div className="cell">{r.rate}</div>
+                </div>
+              );
+            })}
           </div>
         </section>
       </div>

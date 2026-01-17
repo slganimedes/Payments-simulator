@@ -110,8 +110,19 @@ a { color: inherit; text-decoration: none; }
 
 .dashboard {
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: 1fr 260px;
   gap: 16px;
+}
+
+.dashboard-left {
+  display: grid;
+  gap: 16px;
+}
+
+.dashboard-right {
+  display: grid;
+  gap: 16px;
+  align-content: start;
 }
 
 .dashboard-bottom {
@@ -240,6 +251,21 @@ input, select {
   overflow: hidden;
 }
 
+.table-vertical .row {
+  display: grid;
+  grid-template-columns: 1fr;
+  border-bottom: 1px solid var(--border);
+}
+
+.table-vertical .cell {
+  border-right: none;
+  border-bottom: 1px solid var(--border);
+}
+
+.table-vertical .cell:last-child {
+  border-bottom: none;
+}
+
 .row {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -326,5 +352,6 @@ input, select {
   .grid { grid-template-columns: 1fr; }
   .form { grid-template-columns: 1fr; }
   .app-shell { grid-template-columns: 220px 1fr; }
+  .dashboard { grid-template-columns: 1fr; }
   .dashboard-bottom { grid-template-columns: 1fr; }
 }
