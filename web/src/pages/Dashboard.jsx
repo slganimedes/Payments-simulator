@@ -249,15 +249,16 @@ export default function Dashboard() {
                 <div key={c.currency} style={{
                   border: '1px solid var(--border)',
                   borderRadius: '8px',
-                  padding: '12px',
+                  padding: '10px 12px',
                   fontSize: '14px',
                   display: 'flex',
-                  flexDirection: 'column',
-                  gap: '6px',
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: '12px',
                   background: 'rgba(15, 23, 42, 0.4)'
                 }}>
-                  <div style={{ fontWeight: '700', fontSize: '15px' }}>{c.currency}</div>
-                  <div style={{ fontWeight: '600', fontSize: '13px', color: 'var(--muted)' }}>
+                  <div style={{ fontWeight: '700', fontSize: '15px', minWidth: '45px' }}>{c.currency}</div>
+                  <div style={{ fontWeight: '600', fontSize: '13px', color: 'var(--muted)', flex: '1' }}>
                     {String(c.openHour).padStart(2, '0')}:00 - {String(c.closeHour).padStart(2, '0')}:00
                   </div>
                   <div>

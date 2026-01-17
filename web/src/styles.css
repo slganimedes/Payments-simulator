@@ -102,7 +102,7 @@ a { color: inherit; text-decoration: none; }
 
 .dashboard {
   display: grid;
-  grid-template-columns: 1fr 293px;
+  grid-template-columns: 1fr 352px;
   gap: 16px;
 }
 
@@ -119,7 +119,7 @@ a { color: inherit; text-decoration: none; }
 
 .dashboard-bottom {
   display: grid;
-  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  grid-template-columns: 1fr 1fr;
   gap: 16px;
 }
 

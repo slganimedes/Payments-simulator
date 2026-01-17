@@ -274,4 +274,22 @@ Este simulador es ideal para:
 
 ## Licencia
 
+MIT License
+
+Copyright (c) 2026 Payment Simulator
+
 Este proyecto es de uso educativo.
+
+## Versión
+
+**Versión 1.0** - Enero 2026
+
+### Características de la versión 1.0
+- Sistema completo de pagos internacionales con red de corresponsalía
+- Visualización interactiva de red bancaria con D3.js
+- Motor de enrutamiento y liquidación interbancaria
+- Sistema de conversión de divisas (FX) con 7 monedas
+- Horarios de clearing por divisa con zona horaria CET
+- Reloj simulado con control de velocidad
+- Gestión completa de cuentas Nostro/Vostro
+- Validaciones de negocio y contabilidad de precisión decimal
