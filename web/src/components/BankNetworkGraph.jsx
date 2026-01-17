@@ -10,6 +10,11 @@ function BankNetworkGraph({ banks, nostros }) {
   const nodePositionsRef = useRef(new Map());
   const zonePositionsRef = useRef(new Map());
   const [resetTrigger, setResetTrigger] = React.useState(0);
+  const [graphHeight, setGraphHeight] = React.useState(350);
+  const [isFullscreen, setIsFullscreen] = React.useState(false);
+
+  const MIN_HEIGHT = 350;
+  const HEIGHT_STEP = 30;
 
   // Cargar posiciones guardadas
   const loadPositions = useCallback(() => {
@@ -105,8 +110,8 @@ function BankNetworkGraph({ banks, nostros }) {
     // Cargar posiciones guardadas al inicio
     loadPositions();
 
-    const width = 800;
-    const height = 350;
+    const width = isFullscreen ? window.innerWidth : 800;
+    const height = isFullscreen ? window.innerHeight : graphHeight;
     const baseGroupRadius = 110; // Radio base para los primeros 3 bancos
     const bankRadius = 15;
 
@@ -453,10 +458,43 @@ function BankNetworkGraph({ banks, nostros }) {
     const initialTransform = d3.zoomIdentity.translate(0, 0).scale(1);
     svg.call(zoom.transform, initialTransform);
 
-  }, [banks, nostros, grouped, edges, loadPositions, savePositions, saveZonePositions, resetTrigger]);
+  }, [banks, nostros, grouped, edges, loadPositions, savePositions, saveZonePositions, resetTrigger, graphHeight, isFullscreen]);
+
+  const handleIncreaseHeight = () => {
+    setGraphHeight(prev => prev + HEIGHT_STEP);
+  };
+
+  const handleDecreaseHeight = () => {
+    setGraphHeight(prev => Math.max(MIN_HEIGHT, prev - HEIGHT_STEP));
+  };
+
+  const handleToggleFullscreen = () => {
+    setIsFullscreen(prev => !prev);
+  };
+
+  const containerHeight = isFullscreen ? '100vh' : `${graphHeight}px`;
+  const containerStyle = isFullscreen
+    ? {
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        width: '100vw',
+        height: '100vh',
+        zIndex: 9999,
+        background: '#0f172a',
+        borderRadius: 0
+      }
+    : {
+        width: '100%',
+        height: containerHeight,
+        background: '#0f172a',
+        borderRadius: '8px',
+        position: 'relative',
+        overflow: 'hidden'
+      };
 
   return (
-    <div ref={containerRef} style={{ width: '100%', height: '350px', background: '#0f172a', borderRadius: '8px', position: 'relative', overflow: 'hidden' }}>
+    <div ref={containerRef} style={containerStyle}>
       <div
         style={{
           position: 'absolute',
@@ -474,6 +512,108 @@ function BankNetworkGraph({ banks, nostros }) {
         }}
       />
       <svg ref={svgRef} style={{ display: 'block', position: 'relative', zIndex: 1 }} />
+
+      {/* Control buttons */}
+      <div style={{
+        position: 'absolute',
+        bottom: '10px',
+        right: '10px',
+        display: 'flex',
+        gap: '6px',
+        zIndex: 10
+      }}>
+        <button
+          onClick={handleDecreaseHeight}
+          disabled={graphHeight <= MIN_HEIGHT}
+          style={{
+            width: '32px',
+            height: '32px',
+            borderRadius: '6px',
+            border: '1px solid rgba(148, 163, 184, 0.25)',
+            background: 'rgba(17, 27, 46, 0.9)',
+            color: graphHeight <= MIN_HEIGHT ? 'rgba(147, 160, 181, 0.4)' : '#e5e7eb',
+            cursor: graphHeight <= MIN_HEIGHT ? 'not-allowed' : 'pointer',
+            fontSize: '18px',
+            fontWeight: '600',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            transition: 'all 0.2s'
+          }}
+          onMouseEnter={(e) => {
+            if (graphHeight > MIN_HEIGHT) {
+              e.currentTarget.style.background = 'rgba(59, 130, 246, 0.18)';
+              e.currentTarget.style.borderColor = 'rgba(59, 130, 246, 0.4)';
+            }
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = 'rgba(17, 27, 46, 0.9)';
+            e.currentTarget.style.borderColor = 'rgba(148, 163, 184, 0.25)';
+          }}
+          title="Reducir altura"
+        >
+          −
+        </button>
+
+        <button
+          onClick={handleIncreaseHeight}
+          style={{
+            width: '32px',
+            height: '32px',
+            borderRadius: '6px',
+            border: '1px solid rgba(148, 163, 184, 0.25)',
+            background: 'rgba(17, 27, 46, 0.9)',
+            color: '#e5e7eb',
+            cursor: 'pointer',
+            fontSize: '18px',
+            fontWeight: '600',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            transition: 'all 0.2s'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = 'rgba(59, 130, 246, 0.18)';
+            e.currentTarget.style.borderColor = 'rgba(59, 130, 246, 0.4)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = 'rgba(17, 27, 46, 0.9)';
+            e.currentTarget.style.borderColor = 'rgba(148, 163, 184, 0.25)';
+          }}
+          title="Aumentar altura"
+        >
+          +
+        </button>
+
+        <button
+          onClick={handleToggleFullscreen}
+          style={{
+            width: '32px',
+            height: '32px',
+            borderRadius: '6px',
+            border: '1px solid rgba(148, 163, 184, 0.25)',
+            background: 'rgba(17, 27, 46, 0.9)',
+            color: '#e5e7eb',
+            cursor: 'pointer',
+            fontSize: '16px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            transition: 'all 0.2s'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = 'rgba(59, 130, 246, 0.18)';
+            e.currentTarget.style.borderColor = 'rgba(59, 130, 246, 0.4)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = 'rgba(17, 27, 46, 0.9)';
+            e.currentTarget.style.borderColor = 'rgba(148, 163, 184, 0.25)';
+          }}
+          title={isFullscreen ? "Salir de pantalla completa" : "Pantalla completa"}
+        >
+          {isFullscreen ? '⊡' : '⛶'}
+        </button>
+      </div>
     </div>
   );
 }
