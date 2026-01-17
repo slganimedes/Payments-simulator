@@ -73,10 +73,30 @@ Payments Simulator/
 
 ## Instalación
 
+### Con Node.js
+
 ```bash
 cd "Payments Simulator"
 npm install
 ```
+
+### Con Docker
+
+```bash
+# Construir la imagen
+docker build -t payment-simulator .
+
+# Ejecutar el contenedor
+docker run -d --name payment-sim -p 10100:10100 -v payment-data:/app/data payment-simulator
+
+# Ver logs
+docker logs payment-sim
+
+# Detener el contenedor
+docker stop payment-sim
+```
+
+**Nota**: El volumen `-v payment-data:/app/data` persiste la base de datos SQLite entre reinicios del contenedor.
 
 ## Uso
 
