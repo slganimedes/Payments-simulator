@@ -4,7 +4,7 @@ import * as d3 from 'd3';
 const STORAGE_KEY = 'bankNetworkPositions';
 const ZONE_POSITIONS_KEY = 'bankNetworkZonePositions';
 
-function BankNetworkGraph({ banks, nostros, payments = [] }) {
+function BankNetworkGraph({ banks, nostros, payments = [], clock = null }) {
   const svgRef = useRef(null);
   const containerRef = useRef(null);
   const nodePositionsRef = useRef(new Map());
@@ -18,6 +18,7 @@ function BankNetworkGraph({ banks, nostros, payments = [] }) {
   const MIN_HEIGHT = 350;
   const HEIGHT_STEP = 30;
   const ANIMATION_DURATION = 3000; // 3 segundos por segmento
+  const TEN_MINUTES_MS = 10 * 60 * 1000; // 10 minutos en milisegundos
 
   // Cargar posiciones guardadas
   const loadPositions = useCallback(() => {
@@ -463,35 +464,7 @@ function BankNetworkGraph({ banks, nostros, payments = [] }) {
 
   }, [banks, nostros, grouped, edges, loadPositions, savePositions, saveZonePositions, resetTrigger, graphHeight, isFullscreen]);
 
-  // Animación de pagos
-  useEffect(() => {
-    if (!svgRef.current || banks.length === 0) return;
-
-    const svg = d3.select(svgRef.current);
-
-    // Crear grupo para animaciones si no existe
-    if (!animationGroupRef.current) {
-      animationGroupRef.current = svg.select('g').append('g').attr('class', 'payment-animations');
-    }
-
-    const animationGroup = d3.select(animationGroupRef.current);
-
-    // Filtrar pagos exitosos que no hemos procesado aún
-    const newPayments = payments.filter(p =>
-      (p.state === 'EXECUTED' || p.state === 'SETTLED') &&
-      !processedPaymentsRef.current.has(p.id) &&
-      p.route &&
-      p.route.length > 1
-    );
-
-    newPayments.forEach(payment => {
-      processedPaymentsRef.current.add(payment.id);
-      animatePaymentRoute(animationGroup, payment.route, payment.id);
-    });
-
-  }, [payments, banks]);
-
-  const animatePaymentRoute = (animationGroup, route, paymentId) => {
+  const animatePaymentRoute = useCallback((animationGroup, route, paymentId) => {
     if (route.length < 2) return;
 
     const totalSegments = route.length - 1;
@@ -538,7 +511,56 @@ function BankNetworkGraph({ banks, nostros, payments = [] }) {
     };
 
     animateSegment();
-  };
+  }, [ANIMATION_DURATION]);
+
+  // Animación de pagos
+  useEffect(() => {
+    if (!svgRef.current || banks.length === 0) return;
+
+    const svg = d3.select(svgRef.current);
+    let mainGroup = svg.select('g');
+
+    // Si no hay grupo principal, esperar
+    if (mainGroup.empty()) return;
+
+    // Crear o seleccionar grupo para animaciones
+    let animationGroup = mainGroup.select('.payment-animations');
+    if (animationGroup.empty()) {
+      animationGroup = mainGroup.append('g').attr('class', 'payment-animations');
+      animationGroupRef.current = animationGroup.node();
+    }
+
+    // Filtrar pagos exitosos que no hemos procesado aún
+    const currentSimTime = clock?.simTimeMs;
+
+    const newPayments = payments.filter(p => {
+      // Validaciones básicas
+      if ((p.state !== 'EXECUTED' && p.state !== 'SETTLED') ||
+          processedPaymentsRef.current.has(p.id) ||
+          !p.route ||
+          p.route.length < 2) {
+        return false;
+      }
+
+      // Si tenemos tiempo de simulación, filtrar pagos antiguos
+      if (currentSimTime) {
+        const paymentTime = p.settledAtMs || p.executedAtMs || p.createdAtMs;
+        if (paymentTime && (currentSimTime - paymentTime > TEN_MINUTES_MS)) {
+          // Marcar como procesado para no volver a verificarlo
+          processedPaymentsRef.current.add(p.id);
+          return false;
+        }
+      }
+
+      return true;
+    });
+
+    newPayments.forEach(payment => {
+      processedPaymentsRef.current.add(payment.id);
+      animatePaymentRoute(animationGroup, payment.route, payment.id);
+    });
+
+  }, [payments, banks, animatePaymentRoute, clock, TEN_MINUTES_MS]);
 
   const handleIncreaseHeight = () => {
     setGraphHeight(prev => prev + HEIGHT_STEP);
