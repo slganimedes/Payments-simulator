@@ -39,7 +39,7 @@ export function validateForeignCurrencyInvariant(db, bankId, currency) {
     SELECT COALESCE(SUM(CAST(amount AS REAL)), 0) AS total
     FROM balances b
     JOIN clients c ON c.id = b.clientId
-    WHERE c.bankId = ? AND c.type = 'REGULAR' AND b.currency = ?
+    WHERE c.bankId = ? AND c.type IN ('REGULAR', 'HOUSE') AND b.currency = ?
   `).get(bankId, currency);
 
   const total = d(sum.total);

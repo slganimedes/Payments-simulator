@@ -51,7 +51,7 @@ export default function Payments() {
     return () => clearInterval(t);
   }, []);
 
-  const regularClients = useMemo(() => clients.filter((c) => c.type === 'REGULAR'), [clients]);
+  const regularClients = useMemo(() => clients.filter((c) => c.type === 'REGULAR' || c.type === 'HOUSE'), [clients]);
 
   const bankById = useMemo(() => new Map(banks.map((b) => [b.id, b])), [banks]);
 
@@ -178,7 +178,7 @@ export default function Payments() {
 
         <form className="form" onSubmit={onCreatePayment}>
           <label>
-            From (regular client)
+            From
             <select value={form.fromClientId} onChange={(e) => setForm((f) => ({ ...f, fromClientId: e.target.value }))}>
               <option value="">Select…</option>
               {regularClients.map((c) => (
@@ -190,7 +190,7 @@ export default function Payments() {
           </label>
 
           <label>
-            To (regular client)
+            To
             <select value={form.toClientId} onChange={(e) => setForm((f) => ({ ...f, toClientId: e.target.value }))}>
               <option value="">Select…</option>
               {regularClients.map((c) => (
@@ -337,7 +337,10 @@ export default function Payments() {
                     <div><b>{p.creditAmount.toFixed(2)} {p.creditCurrency}</b></div>
                     <div className="muted">Debit: {p.debitAmount.toFixed(2)} {p.debitCurrency}</div>
                     <div className="muted">Settlement: {p.settlementCurrency}</div>
-                    <div className="muted">Route: {p.route?.length ? p.route.map((id) => bankNameById.get(id) ?? id).join(' -> ') : '—'}</div>
+                    <div className="muted">Route: {p.route?.length ? p.route.map((id) => {
+                      const name = bankNameById.get(id) ?? id;
+                      return p.fxAtBankIds?.includes(id) ? `${name} (FX)` : name;
+                    }).join(' → ') : '—'}</div>
                     {p.failReason ? <div className="error">{p.failReason}</div> : null}
                   </div>
                 </div>

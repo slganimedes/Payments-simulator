@@ -34,6 +34,22 @@ export function createRegularClient(db, { id, bankId, name, createdAtMs }) {
     .run(id, bankId, name, 'REGULAR', null, createdAtMs);
 }
 
+export function getOrCreateHouseClient(db, { bankId, createdAtMs }) {
+  const existing = db.prepare(
+    "SELECT id, bankId, name, type, vostroForBankId, createdAtMs FROM clients WHERE bankId = ? AND type = 'HOUSE'"
+  ).get(bankId);
+
+  if (existing) return existing;
+
+  const id = newId(db, 'house_client', 'HOUSE_');
+  const bank = db.prepare('SELECT name FROM banks WHERE id = ?').get(bankId);
+  const name = `${bank?.name ?? bankId} (House)`;
+  db.prepare('INSERT INTO clients(id, bankId, name, type, vostroForBankId, createdAtMs) VALUES(?, ?, ?, ?, ?, ?)')
+    .run(id, bankId, name, 'HOUSE', null, createdAtMs);
+
+  return db.prepare('SELECT id, bankId, name, type, vostroForBankId, createdAtMs FROM clients WHERE id = ?').get(id);
+}
+
 export function getOrCreateVostroClient(db, { hostBankId, foreignBankId, createdAtMs }) {
   const existing = db.prepare(
     "SELECT id, bankId, name, type, vostroForBankId, createdAtMs FROM clients WHERE bankId = ? AND type = 'VOSTRO' AND vostroForBankId = ?"

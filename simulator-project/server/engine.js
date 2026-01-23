@@ -15,11 +15,12 @@ export function startEngine(db) {
 
 function processQueued(db) {
   const queued = db.prepare(
-    "SELECT id, settlementCurrency FROM payments WHERE state = 'QUEUED' ORDER BY createdAtMs ASC"
+    "SELECT id, settlementCurrency, fromBankId, toBankId FROM payments WHERE state = 'QUEUED' ORDER BY createdAtMs ASC"
   ).all();
 
   for (const p of queued) {
-    if (isWithinClearingHours(db, p.settlementCurrency)) {
+    const isIntraBank = p.fromBankId === p.toBankId;
+    if (isIntraBank || isWithinClearingHours(db, p.settlementCurrency)) {
       executePayment(db, p.id);
     }
   }

@@ -10,24 +10,31 @@ import { getNostro, adjustNostroAndMirrorVostro } from './nostroVostro.js';
 
 export function listPayments(db) {
   const rows = db.prepare('SELECT * FROM payments ORDER BY createdAtMs DESC').all();
-  return rows.map((p) => ({
-    id: p.id,
-    fromClientId: p.fromClientId,
-    toClientId: p.toClientId,
-    fromBankId: p.fromBankId,
-    toBankId: p.toBankId,
-    debitCurrency: p.debitCurrency,
-    creditCurrency: p.creditCurrency,
-    debitAmount: Number(p.debitAmount),
-    creditAmount: Number(p.creditAmount),
-    settlementCurrency: p.settlementCurrency,
-    state: p.state,
-    failReason: p.failReason,
-    createdAtMs: p.createdAtMs,
-    executedAtMs: p.executedAtMs,
-    settledAtMs: p.settledAtMs,
-    route: JSON.parse(p.routeJson)
-  }));
+  return rows.map((p) => {
+    const route = JSON.parse(p.routeJson);
+    const fxAtBankIds = [];
+    if (p.debitCurrency !== p.settlementCurrency) fxAtBankIds.push(p.fromBankId);
+    if (p.settlementCurrency !== p.creditCurrency) fxAtBankIds.push(p.toBankId);
+    return {
+      id: p.id,
+      fromClientId: p.fromClientId,
+      toClientId: p.toClientId,
+      fromBankId: p.fromBankId,
+      toBankId: p.toBankId,
+      debitCurrency: p.debitCurrency,
+      creditCurrency: p.creditCurrency,
+      debitAmount: Number(p.debitAmount),
+      creditAmount: Number(p.creditAmount),
+      settlementCurrency: p.settlementCurrency,
+      state: p.state,
+      failReason: p.failReason,
+      createdAtMs: p.createdAtMs,
+      executedAtMs: p.executedAtMs,
+      settledAtMs: p.settledAtMs,
+      route,
+      fxAtBankIds
+    };
+  });
 }
 
 export function createPaymentIntent(db, payload) {
@@ -35,7 +42,10 @@ export function createPaymentIntent(db, payload) {
   const toClient = db.prepare('SELECT id, bankId, type FROM clients WHERE id = ?').get(payload.toClientId);
 
   if (!fromClient || !toClient) throw new Error('Client not found');
-  if (fromClient.type !== 'REGULAR' || toClient.type !== 'REGULAR') throw new Error('Payments must be between regular clients');
+  const allowedTypes = ['REGULAR', 'HOUSE'];
+  if (!allowedTypes.includes(fromClient.type) || !allowedTypes.includes(toClient.type)) {
+    throw new Error('Payments must be between regular or house clients');
+  }
 
   // Validate: fromClient must have balance > 0 in debit currency
   const fromBalance = getClientBalance(db, fromClient.id, payload.debitCurrency);

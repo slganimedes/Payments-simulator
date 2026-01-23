@@ -7,7 +7,7 @@ export function applyRegularClientDelta(db, { clientId, currency, delta }) {
 
   const c = db.prepare('SELECT bankId, type FROM clients WHERE id = ?').get(clientId);
   if (!c) throw new Error('Client not found');
-  if (c.type !== 'REGULAR') throw new Error('Only regular clients supported here');
+  if (c.type !== 'REGULAR' && c.type !== 'HOUSE') throw new Error('Only regular or house clients supported here');
 
   const oldBal = getClientBalance(db, clientId, currency);
   const newBal = oldBal.add(delta);
@@ -36,7 +36,7 @@ export function applyRegularClientDeltaClientOnly(db, { clientId, currency, delt
 
   const c = db.prepare('SELECT bankId, type FROM clients WHERE id = ?').get(clientId);
   if (!c) throw new Error('Client not found');
-  if (c.type !== 'REGULAR') throw new Error('Only regular clients supported here');
+  if (c.type !== 'REGULAR' && c.type !== 'HOUSE') throw new Error('Only regular or house clients supported here');
 
   const oldBal = getClientBalance(db, clientId, currency);
   const newBal = oldBal.add(delta);

@@ -6,14 +6,7 @@ Simulador educativo de pagos internacionales que modela el flujo de transferenci
 
 ## Características
 
-- **Red de bancos corresponsales**: Visualización interactiva D3.js con grafo de bancos agrupados por moneda base
-  - Nodos arrastrables con persistencia en localStorage
-  - Zonas de divisas arrastrables desde el centro
-  - Tamaño dinámico de zonas según número de bancos
-  - Conexiones Nostro/Vostro visualizadas
-  - Zoom y pan con persistencia de estado
-  - Controles de tamaño (+/-) y modo pantalla completa
-  - **Animaciones de pagos**: Visualización en tiempo real del flujo de pagos entre bancos
+- **Bancos agrupados por Banco central (Divisa**)
 - **Pagos transfronterizos**: Simulación completa del ciclo de vida de pagos internacionales
 - **Conversión de divisas (FX)**: Sistema de tipos de cambio con pivot en USD (7 divisas)
 - **Cuentas Nostro/Vostro**: Implementación del modelo de cuentas interbancarias
@@ -176,6 +169,11 @@ El sistema simula el flujo completo de un pago internacional:
 5. **FX destino** (si aplica): Conversión a moneda de crédito
 6. **Abono**: Cliente beneficiario recibe fondos
 
+### Tipos de cuenta
+- **REGULAR**: Clientes normales del banco que pueden enviar y recibir pagos
+- **HOUSE**: Cuenta propia del banco para gestionar su saldo (divisa base + divisas Nostro)
+- **VOSTRO**: Cuenta espejo que refleja el saldo de un banco corresponsal
+
 ### Cuentas Nostro/Vostro
 - **Nostro** ("nuestro"): Cuenta que un banco mantiene en otro banco corresponsal
 - **Vostro** ("vuestro"): Cuenta que un banco corresponsal mantiene para nosotros
@@ -189,7 +187,8 @@ El sistema encuentra automáticamente rutas óptimas entre bancos:
 
 ### Motor de procesamiento
 Un motor automático procesa pagos en cola cada 500ms:
-- Solo procesa durante horarios de clearing abiertos
+- Solo procesa durante horarios de clearing abiertos (excepto pagos intrabancarios)
+- Los pagos entre clientes del mismo banco se procesan inmediatamente
 - Ejecuta transacciones de forma atómica
 - Registra mensajes de auditoría en cada paso
 
@@ -232,7 +231,7 @@ export const SIM_EPOCH_MS = Date.UTC(2026, 0, 1, 9, 0, 0);
 ## Casos de uso educativos
 
 Este simulador es ideal para:
-- Entender el flujo de pagos SWIFT
+- Entender el flujo de pagos con corresponsalía
 - Visualizar redes de corresponsalía bancaria
 - Aprender sobre liquidación interbancaria
 - Comprender el rol de las cuentas Nostro/Vostro
@@ -256,7 +255,15 @@ Este proyecto es de uso educativo.
 
 ## Versión
 
-**Versión 1.1** - Enero 2026
+**Versión 1.2** - Enero 2026
+
+### Características de la versión 1.2
+- **Indicador FX en rutas de pago**: La ruta de cada pago muestra con etiqueta `(FX)` en qué banco se realizó la conversión de divisas
+- **Cuentas HOUSE (saldo propio del banco)**: Cada banco tiene una cuenta propia (tipo HOUSE) que gestiona su saldo en divisa base y en divisas de sus Nostros
+  - Se crea automáticamente al crear un banco
+  - Soporta depósitos y pagos como cualquier cliente regular
+  - Sigue las mismas reglas de balance e invariantes que clientes REGULAR
+- **Pagos intrabancarios sin horario de cámara**: Los pagos entre clientes del mismo banco se procesan inmediatamente, sin esperar a la ventana de clearing de la divisa de liquidación
 
 ### Características de la versión 1.1
 - **Animaciones de pagos en el grafo**: Cuando un pago se liquida, una bolita animada recorre la ruta entre bancos
@@ -268,7 +275,7 @@ Este proyecto es de uso educativo.
 - **Reorganización del proyecto**: Código fuente movido a `simulator-project/`
 - **Documentación de API**: Nuevo fichero `API.md` con documentación completa
 - **Validaciones mejoradas de pagos**:
-  - Solo clientes REGULAR pueden hacer pagos
+  - Clientes REGULAR y HOUSE pueden hacer pagos
   - Validación de balance > 0 en la divisa de débito
   - Validación de disponibilidad de divisa en banco destino
 - **Mensajes de error mejorados** para restricciones de Nostro

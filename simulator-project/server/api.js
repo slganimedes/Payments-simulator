@@ -5,7 +5,7 @@ import { getSimTimeMs, getClock, pause, play, faster, slower } from './domain/cl
 import { getClearingHours } from './domain/clearing.js';
 import { getFxRates } from './domain/fx.js';
 import { newId } from './domain/ids.js';
-import { listBanks, createBank, listClients, createRegularClient } from './domain/accounts.js';
+import { listBanks, createBank, listClients, createRegularClient, getOrCreateHouseClient } from './domain/accounts.js';
 import { applyRegularClientDelta } from './domain/balances.js';
 import { d } from './domain/money.js';
 import { listNostros, createNostroWithMirrorVostro } from './domain/nostroVostro.js';
@@ -69,6 +69,7 @@ export function buildApiRouter(db) {
     const id = newId(db, 'bank', 'B_');
 
     createBank(db, { id, name: body.name, baseCurrency: body.baseCurrency, createdAtMs: now });
+    getOrCreateHouseClient(db, { bankId: id, createdAtMs: now });
 
     res.json({ id });
   });
@@ -88,7 +89,7 @@ export function buildApiRouter(db) {
 
     const c = db.prepare('SELECT type FROM clients WHERE id = ?').get(clientId);
     if (!c) throw new Error('Client not found');
-    if (c.type !== 'REGULAR') throw new Error('Deposits are only allowed for regular clients');
+    if (c.type !== 'REGULAR' && c.type !== 'HOUSE') throw new Error('Deposits are only allowed for regular or house clients');
 
     const tx = db.transaction(() => {
       applyRegularClientDelta(db, {

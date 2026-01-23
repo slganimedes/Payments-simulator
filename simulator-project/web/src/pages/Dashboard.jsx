@@ -227,7 +227,10 @@ export default function Dashboard() {
                         <div><b>{p.creditAmount.toFixed(2)} {p.creditCurrency}</b></div>
                         <div className="muted">Debit: {p.debitAmount.toFixed(2)} {p.debitCurrency}</div>
                         <div className="muted">Settlement: {p.settlementCurrency}</div>
-                        <div className="muted">Route: {p.route?.length ? p.route.map((id) => bankNameById.get(id) ?? id).join(' -> ') : '—'}</div>
+                        <div className="muted">Route: {p.route?.length ? p.route.map((id) => {
+                          const name = bankNameById.get(id) ?? id;
+                          return p.fxAtBankIds?.includes(id) ? `${name} (FX)` : name;
+                        }).join(' → ') : '—'}</div>
                         {p.failReason ? <div className="error">{p.failReason}</div> : null}
                       </div>
                     </div>
