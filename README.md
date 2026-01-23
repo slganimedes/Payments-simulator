@@ -28,38 +28,51 @@ Simulador educativo de pagos internacionales que modela el flujo de transferenci
 
 ```
 Payments Simulator/
-├── server/
-│   ├── domain/          # Lógica de negocio
-│   │   ├── payments.js  # Gestión de pagos
-│   │   ├── fx.js        # Conversión de divisas
-│   │   ├── nostroVostro.js  # Cuentas corresponsales
-│   │   ├── routing.js   # Enrutamiento interbancario
-│   │   ├── clearing.js  # Horarios de liquidación
-│   │   ├── balances.js  # Gestión de saldos
-│   │   ├── accounts.js  # Bancos y clientes
-│   │   ├── money.js     # Precisión decimal
-│   │   ├── clock.js     # Tiempo simulado (tick-based)
-│   │   ├── ids.js       # Generación de IDs
-│   │   └── invariants.js # Validaciones
-│   ├── app.js          # Express app
-│   ├── api.js          # API endpoints
-│   ├── engine.js       # Motor de procesamiento
-│   ├── config.js       # Configuración (divisas, FX, horarios)
-│   └── db.js           # Base de datos SQLite
-├── web/
-│   └── src/
-│       ├── components/
-│       │   └── BankNetworkGraph.jsx  # Grafo D3.js interactivo
-│       ├── pages/
-│       │   ├── Dashboard.jsx    # Red y pagos
-│       │   ├── BankDetails.jsx  # Detalles de bancos
-│       │   ├── Payments.jsx     # Crear pagos
-│       │   └── FX.jsx           # Tipos de cambio
-│       ├── layout/
-│       │   └── RootLayout.jsx   # Layout principal con reloj
-│       ├── App.jsx
-│       └── api.js
-└── data/                # Base de datos SQLite
+├── README.md              # Este fichero
+├── API.md                 # Documentación de la API REST
+├── LICENSE.txt            # Licencia MIT
+├── Example.png            # Captura de pantalla
+├── install-and-run.bat    # Script de instalación (CMD)
+├── install-and-run.ps1    # Script de instalación (PowerShell)
+├── .gitignore
+└── simulator-project/     # Código fuente del simulador
+    ├── package.json
+    ├── vite.config.js
+    ├── Dockerfile
+    ├── server/
+    │   ├── domain/        # Lógica de negocio
+    │   │   ├── payments.js    # Gestión de pagos
+    │   │   ├── fx.js          # Conversión de divisas
+    │   │   ├── nostroVostro.js  # Cuentas corresponsales
+    │   │   ├── routing.js     # Enrutamiento interbancario
+    │   │   ├── clearing.js    # Horarios de liquidación
+    │   │   ├── balances.js    # Gestión de saldos
+    │   │   ├── accounts.js    # Bancos y clientes
+    │   │   ├── money.js       # Precisión decimal
+    │   │   ├── clock.js       # Tiempo simulado (tick-based)
+    │   │   ├── ids.js         # Generación de IDs
+    │   │   └── invariants.js  # Validaciones
+    │   ├── app.js         # Express app
+    │   ├── api.js         # API endpoints
+    │   ├── engine.js      # Motor de procesamiento
+    │   ├── config.js      # Configuración (divisas, FX, horarios)
+    │   ├── db.js          # Base de datos SQLite
+    │   ├── dev.js         # Servidor desarrollo
+    │   └── prod.js        # Servidor producción
+    ├── web/
+    │   └── src/
+    │       ├── components/
+    │       │   └── BankNetworkGraph.jsx  # Grafo D3.js interactivo
+    │       ├── pages/
+    │       │   ├── Dashboard.jsx    # Red y pagos
+    │       │   ├── BankDetails.jsx  # Detalles de bancos
+    │       │   ├── Payments.jsx     # Crear pagos
+    │       │   └── FX.jsx           # Tipos de cambio
+    │       ├── layout/
+    │       │   └── RootLayout.jsx   # Layout principal con reloj
+    │       ├── App.jsx
+    │       └── api.js
+    └── data/              # Base de datos SQLite
 ```
 
 ## Tecnologías
@@ -81,13 +94,15 @@ Payments Simulator/
 ### Con Node.js
 
 ```bash
-cd "Payments Simulator"
+cd simulator-project
 npm install
 ```
 
 ### Con Docker
 
 ```bash
+cd simulator-project
+
 # Construir la imagen
 docker build -t payment-simulator .
 
@@ -103,21 +118,51 @@ docker stop payment-sim
 
 **Nota**: El volumen `-v payment-data:/app/data` persiste la base de datos SQLite entre reinicios del contenedor.
 
+### Script automático (Windows)
+
+Descarga y ejecuta `install-and-run.bat` o `install-and-run.ps1` para clonar, instalar y arrancar automáticamente.
+
 ## Uso
 
 ### Modo desarrollo
 ```bash
+cd simulator-project
 npm run dev
 ```
 Inicia el servidor en modo desarrollo con Vite HMR
 
 ### Modo producción
 ```bash
+cd simulator-project
 npm run build  # Construye el frontend
 npm start      # Inicia el servidor de producción
 ```
 
 La aplicación estará disponible en `http://localhost:10100`
+
+## API
+
+La documentación completa de la API REST está disponible en [API.md](./API.md).
+
+Resumen de endpoints:
+
+```
+GET  /api/banks           # Lista todos los bancos
+POST /api/banks           # Crea un nuevo banco
+GET  /api/clients         # Lista todos los clientes
+POST /api/banks/:id/clients  # Crea cliente en un banco
+POST /api/clients/:id/deposit  # Depositar fondos
+GET  /api/nostros         # Lista cuentas Nostro
+POST /api/correspondents/nostro  # Crea cuenta Nostro + Vostro espejo
+GET  /api/payments        # Lista todos los pagos
+POST /api/payments        # Crea intención de pago
+GET  /api/fx              # Tipos de cambio actuales
+GET  /api/fx-history      # Historial de conversiones FX
+GET  /api/clearing-hours  # Horarios de clearing
+GET  /api/clock           # Tiempo de simulación actual
+POST /api/admin/clock/*   # Control del reloj
+POST /api/admin/reset     # Reinicia toda la simulación
+```
 
 ## Conceptos clave
 
@@ -150,14 +195,11 @@ Un motor automático procesa pagos en cola cada 500ms:
 
 ## Configuración
 
-La configuración principal está en `server/config.js`:
+La configuración principal está en `simulator-project/server/config.js`:
 
 ```javascript
 // Puerto del servidor
 export const SERVER_PORT = 10100;
-
-// Archivo de base de datos
-export const DB_FILE_PATH = '../data/payment-simulator.sqlite';
 
 // Divisas soportadas
 export const SUPPORTED_CURRENCIES = ['USD', 'EUR', 'GBP', 'CHF', 'JPY', 'MXN', 'HKD'];
@@ -187,77 +229,6 @@ export const CLEARING_HOURS = {
 export const SIM_EPOCH_MS = Date.UTC(2026, 0, 1, 9, 0, 0);
 ```
 
-## API Endpoints
-
-```
-GET  /api/banks           # Lista todos los bancos
-POST /api/banks           # Crea un nuevo banco
-GET  /api/clients         # Lista todos los clientes
-POST /api/banks/:id/clients  # Crea cliente en un banco
-GET  /api/nostros         # Lista cuentas Nostro
-POST /api/correspondents/nostro  # Crea cuenta Nostro + Vostro espejo
-GET  /api/payments        # Lista todos los pagos
-POST /api/payments        # Crea intención de pago
-GET  /api/fx              # Tipos de cambio actuales
-GET  /api/fx-history      # Historial de conversiones FX
-GET  /api/clearing-hours  # Horarios de clearing
-GET  /api/clock           # Tiempo de simulación actual
-POST /api/admin/clock/pause   # Pausa el reloj
-POST /api/admin/clock/play    # Reanuda el reloj
-POST /api/admin/clock/faster  # Acelera el reloj (x2)
-POST /api/admin/clock/slower  # Desacelera el reloj (/2)
-POST /api/admin/reset         # Reinicia toda la simulación
-POST /api/admin/reset-clock   # Reinicia solo el reloj
-```
-
-## Estados de pago
-
-- **QUEUED**: Pago creado, esperando horario de clearing
-- **EXECUTED**: Pago procesado y liquidado
-- **SETTLED**: Pago completado
-- **FAILED**: Pago falló (ej. fondos insuficientes, sin ruta)
-
-## Monedas soportadas
-
-- USD (Dólar estadounidense)
-- EUR (Euro)
-- GBP (Libra esterlina)
-- CHF (Franco suizo)
-- JPY (Yen japonés)
-- HKD (Dólar de Hong Kong)
-- MXN (Peso mexicano)
-
-### Tipos de cambio (USD como pivot)
-
-Los tipos de cambio están configurados en `server/config.js`:
-
-```javascript
-FX_USD_PIVOT_RATES = {
-  EUR: '0.85',
-  GBP: '0.77',
-  CHF: '0.95',
-  JPY: '150',
-  HKD: '7.80',
-  MXN: '20.00'
-}
-```
-
-### Horarios de clearing (CET)
-
-Cada divisa tiene horarios de liquidación específicos configurados en `server/config.js`:
-
-```javascript
-CLEARING_HOURS = {
-  USD: { openHour: 13, closeHour: 22 },  // 13:00-22:00 CET
-  EUR: { openHour: 8, closeHour: 17 },   // 08:00-17:00 CET
-  GBP: { openHour: 7, closeHour: 16 },   // 07:00-16:00 CET
-  CHF: { openHour: 8, closeHour: 17 },   // 08:00-17:00 CET
-  JPY: { openHour: 0, closeHour: 9 },    // 00:00-09:00 CET
-  HKD: { openHour: 0, closeHour: 9 },    // 00:00-09:00 CET
-  MXN: { openHour: 14, closeHour: 23 }   // 14:00-23:00 CET
-}
-```
-
 ## Casos de uso educativos
 
 Este simulador es ideal para:
@@ -270,7 +241,7 @@ Este simulador es ideal para:
 
 ## Notas
 
-- Los datos se almacenan en SQLite (`data/payment-simulator.sqlite`)
+- Los datos se almacenan en SQLite (`simulator-project/data/payment-simulator.sqlite`)
 - El motor de procesamiento simula latencia y asincronía real
 - Todas las operaciones monetarias usan precisión decimal para evitar errores de redondeo
 - El sistema es educativo y simplifica ciertos aspectos del clearing real (ej. no hay banco central)
@@ -294,6 +265,8 @@ Este proyecto es de uso educativo.
   - Filtro de pagos antiguos (>10 min en tiempo de simulación) para evitar animaciones en recarga
 - **Persistencia de zoom/pan**: El estado de zoom y posición del grafo se guarda en localStorage
 - **Controles del grafo**: Botones +/- para ajustar altura y modo pantalla completa
+- **Reorganización del proyecto**: Código fuente movido a `simulator-project/`
+- **Documentación de API**: Nuevo fichero `API.md` con documentación completa
 - **Validaciones mejoradas de pagos**:
   - Solo clientes REGULAR pueden hacer pagos
   - Validación de balance > 0 en la divisa de débito

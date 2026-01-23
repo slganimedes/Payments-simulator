@@ -1,14 +1,14 @@
 # Dependencies
-node_modules/
-package-lock.json
+simulator-project/node_modules/
+simulator-project/package-lock.json
 
 # Build output
-web/dist/
+simulator-project/dist/
 
 # Database
-data/*.sqlite
-data/*.sqlite-shm
-data/*.sqlite-wal
+simulator-project/data/*.sqlite
+simulator-project/data/*.sqlite-shm
+simulator-project/data/*.sqlite-wal
 
 # Logs
 *.log

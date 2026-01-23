@@ -53,9 +53,10 @@ if %errorlevel% neq 0 (
     exit /b 1
 )
 
-cd /d "%INSTALL_DIR%"
+cd /d "%INSTALL_DIR%\simulator-project"
 
 :install_deps
+cd /d "%INSTALL_DIR%\simulator-project"
 echo.
 echo [INFO] Instalando dependencias...
 call npm install

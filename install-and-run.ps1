@@ -38,7 +38,8 @@ if (Test-Path $installDir) {
     Write-Host "[INFO] El directorio ya existe. Actualizando..." -ForegroundColor Yellow
     Set-Location $installDir
     git pull
-} else {
+}
+else {
     # Clonar repositorio
     Write-Host "[INFO] Clonando repositorio en $installDir..." -ForegroundColor White
     git clone "https://github.com/slganimedes/Payments-simulator.git" $installDir
@@ -51,6 +52,9 @@ if (Test-Path $installDir) {
 
     Set-Location $installDir
 }
+
+# Entrar al directorio del proyecto
+Set-Location (Join-Path $installDir "simulator-project")
 
 # Instalar dependencias
 Write-Host ""

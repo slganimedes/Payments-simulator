@@ -1,4 +1,5 @@
 import path from 'path';
+import { fileURLToPath } from 'url';
 import express from 'express';
 
 import { SERVER_PORT } from './config.js';
@@ -11,7 +12,7 @@ startEngine(db);
 
 const app = createExpressApp(db);
 
-const distPath = path.resolve(process.cwd(), 'dist');
+const distPath = fileURLToPath(new URL('../dist', import.meta.url));
 app.use(express.static(distPath));
 
 // SPA fallback
