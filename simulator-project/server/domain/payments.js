@@ -110,10 +110,10 @@ export function createPaymentIntent(db, payload) {
   const debitAmount = d(payload.debitAmount);
   const settlementAmount = payload.debitCurrency === settlementCurrency
     ? debitAmount
-    : convert(db, payload.debitCurrency, settlementCurrency, debitAmount).toAmount;
+    : d(convert(db, payload.debitCurrency, settlementCurrency, debitAmount).toAmount.toFixed(2));
   const creditAmount = settlementCurrency === payload.creditCurrency
     ? settlementAmount
-    : convert(db, settlementCurrency, payload.creditCurrency, settlementAmount).toAmount;
+    : d(convert(db, settlementCurrency, payload.creditCurrency, settlementAmount).toAmount.toFixed(2));
 
   const id = newId(db, 'payment', 'PAY_');
   db.prepare(`
@@ -181,7 +181,7 @@ export function executePayment(db, paymentId) {
     const creditAmount = d(payment.creditAmount);
     const settlementAmount = payment.debitCurrency === payment.settlementCurrency
       ? debitAmount
-      : convert(db, payment.debitCurrency, payment.settlementCurrency, debitAmount).toAmount;
+      : d(convert(db, payment.debitCurrency, payment.settlementCurrency, debitAmount).toAmount.toFixed(2));
 
     // FX at originating bank if needed: debitCurrency -> settlementCurrency
     if (payment.debitCurrency !== payment.settlementCurrency) {
