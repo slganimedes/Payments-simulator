@@ -175,6 +175,9 @@ export function executePayment(db, paymentId) {
   if (payment.state !== 'QUEUED') return;
 
   const simNow = getSimTimeMs(db);
+  const route = JSON.parse(payment.routeJson);
+
+  console.log(`[PAY] ${payment.id} | ${payment.fromClientId} → ${payment.toClientId} | ${payment.debitAmount} ${payment.debitCurrency} → ${payment.creditAmount} ${payment.creditCurrency} | settlement: ${payment.settlementCurrency} | route: ${route.join(' → ')}`);
 
   const tx = db.transaction(() => {
     const debitAmount = d(payment.debitAmount);
@@ -183,8 +186,11 @@ export function executePayment(db, paymentId) {
       ? debitAmount
       : d(convert(db, payment.debitCurrency, payment.settlementCurrency, debitAmount).toAmount.toFixed(2));
 
+    console.log(`[PAY]   settlementAmount: ${settlementAmount.toFixed(2)} ${payment.settlementCurrency}`);
+
     // FX at originating bank if needed: debitCurrency -> settlementCurrency
     if (payment.debitCurrency !== payment.settlementCurrency) {
+      console.log(`[PAY]   origin FX: ${debitAmount.toFixed(2)} ${payment.debitCurrency} → ${settlementAmount.toFixed(2)} ${payment.settlementCurrency} @ ${payment.fromBankId}`);
       applyRegularClientDelta(db, { clientId: payment.fromClientId, currency: payment.debitCurrency, delta: debitAmount.neg() });
       applyRegularClientDelta(db, { clientId: payment.fromClientId, currency: payment.settlementCurrency, delta: settlementAmount });
 
@@ -216,11 +222,12 @@ export function executePayment(db, paymentId) {
     }
 
     // 1) Move client balances without touching Nostro/Vostro
-    // Debit originating client in settlement currency, credit beneficiary client in credit currency.
+    console.log(`[PAY]   transfer: debit ${payment.fromClientId} -${settlementAmount.toFixed(2)} ${payment.settlementCurrency}, credit ${payment.toClientId} +${creditAmount.toFixed(2)} ${payment.creditCurrency}`);
     applyRegularClientDeltaClientOnly(db, { clientId: payment.fromClientId, currency: payment.settlementCurrency, delta: settlementAmount.neg() });
     applyRegularClientDeltaClientOnly(db, { clientId: payment.toClientId, currency: payment.creditCurrency, delta: creditAmount });
 
     // 2) Interbank settlement in settlement currency
+    console.log(`[PAY]   interbank: ${payment.fromBankId} → ${payment.toBankId} | ${settlementAmount.toFixed(2)} ${payment.settlementCurrency}`);
     settleInterbank(db, {
       fromBankId: payment.fromBankId,
       toBankId: payment.toBankId,
@@ -229,8 +236,8 @@ export function executePayment(db, paymentId) {
     });
 
     // 3) FX at destination bank if needed: consume beneficiary Nostro in settlement currency
-    // and record the conversion into the beneficiary base currency paid to the client.
     if (payment.settlementCurrency !== payment.creditCurrency) {
+      console.log(`[PAY]   dest FX: ${settlementAmount.toFixed(2)} ${payment.settlementCurrency} → ${creditAmount.toFixed(2)} ${payment.creditCurrency} @ ${payment.toBankId}`);
       const n = getNostro(db, payment.toBankId, payment.settlementCurrency);
       if (!n) throw new Error(`Missing Nostro for beneficiary bank in ${payment.settlementCurrency}`);
 
@@ -301,7 +308,9 @@ export function executePayment(db, paymentId) {
 
   try {
     tx();
+    console.log(`[PAY]   ✓ SETTLED ${payment.id}`);
   } catch (e) {
+    console.log(`[PAY]   ✗ FAILED ${payment.id}: ${e.message ?? e}`);
     failPayment(db, paymentId, String(e.message ?? e));
   }
 }
