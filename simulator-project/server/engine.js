@@ -8,7 +8,7 @@ export function startEngine(db) {
     } catch {
       // ignore engine loop errors (deterministic state preserved by transactions)
     }
-  }, 500);
+  }, 1000);
 
   return () => clearInterval(timer);
 }
@@ -22,6 +22,7 @@ function processQueued(db) {
     const isIntraBank = p.fromBankId === p.toBankId;
     if (isIntraBank || isWithinClearingHours(db, p.settlementCurrency)) {
       executePayment(db, p.id);
+      break; // FIFO: 1 payment per second
     }
   }
 }

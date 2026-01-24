@@ -129,11 +129,9 @@ export default function Dashboard() {
     return totals;
   }, [banks, nostrosByOwnerBankId, clientsAtBanks]);
 
-  const simHourCET = useMemo(() => {
+  const simHour = useMemo(() => {
     if (!clock?.simTimeMs) return null;
-    // Convertir a CET (UTC+1)
-    const utcHours = new Date(clock.simTimeMs).getUTCHours();
-    return (utcHours + 1) % 24;
+    return new Date(clock.simTimeMs).getUTCHours();
   }, [clock]);
 
   const bankNameById = useMemo(() => {
@@ -235,8 +233,8 @@ export default function Dashboard() {
                           <div className="payment-body">
                             <div className="muted">{p.fromClientName} ({p.fromBankName}) → {p.toClientName} ({p.toBankName})</div>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                              <b>{p.creditAmount.toFixed(2)} {p.creditCurrency}</b>
-                              <span className="muted">Debit: {p.debitAmount.toFixed(2)} {p.debitCurrency}</span>
+                              <span className="muted">Debit: {Number(p.debitAmount).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {p.debitCurrency}</span>
+                              <b>{Number(p.creditAmount).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {p.creditCurrency}</b>
                               <span className="muted">Settlement: {p.settlementCurrency}</span>
                             </div>
                             <div className="muted">Route: {p.route?.length ? p.route.map((id) => {
@@ -268,7 +266,7 @@ export default function Dashboard() {
           <h2>Clearing hours</h2>
           <div style={{ display: 'grid', gap: '8px' }}>
             {clearing.map((c) => {
-              const open = isOpen(c.openHour, c.closeHour, simHourCET);
+              const open = isOpen(c.openHour, c.closeHour, simHour);
               return (
                 <div key={c.currency} style={{
                   border: '1px solid var(--border)',

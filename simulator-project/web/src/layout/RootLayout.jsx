@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
 import { apiGet, apiPost } from '../api.js';
 
-function formatCETDateTime(ms) {
+function formatSimDateTime(ms) {
   const dt = new Date(ms);
   return new Intl.DateTimeFormat('en-GB', {
     year: 'numeric',
@@ -12,8 +12,7 @@ function formatCETDateTime(ms) {
     minute: '2-digit',
     second: '2-digit',
     hour12: false,
-    timeZone: 'Europe/Paris',
-    timeZoneName: 'short'
+    timeZone: 'UTC'
   }).format(dt);
 }
 
@@ -135,7 +134,7 @@ export default function RootLayout() {
           <div className="clock">
             <div>
               <div className="clock-label">Sim time</div>
-              <div className="clock-value">{clock ? formatCETDateTime(clock.simTimeMs) : '—'}</div>
+              <div className="clock-value">{clock ? formatSimDateTime(clock.simTimeMs) : '—'}</div>
               <div className="clock-meta">x{clock ? clock.tick : '—'}</div>
             </div>
           </div>

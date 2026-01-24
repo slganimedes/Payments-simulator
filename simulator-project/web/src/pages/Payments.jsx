@@ -319,7 +319,7 @@ export default function Payments() {
                     {currencies.map((cur) => (
                       <div className="row" key={cur}>
                         <div className="cell"><b>{cur}</b></div>
-                        <div className="cell">{Number(balances.get(cur) ?? 0).toFixed(2)}</div>
+                        <div className="cell">{Number(balances.get(cur) ?? 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
                       </div>
                     ))}
                   </div>
@@ -361,8 +361,8 @@ export default function Payments() {
                         <div className="payment-body">
                           <div className="muted">{p.fromClientName} ({p.fromBankName}) → {p.toClientName} ({p.toBankName})</div>
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                            <b>{p.creditAmount.toFixed(2)} {p.creditCurrency}</b>
-                            <span className="muted">Debit: {p.debitAmount.toFixed(2)} {p.debitCurrency}</span>
+                            <span className="muted">Debit: {Number(p.debitAmount).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {p.debitCurrency}</span>
+                            <b>{Number(p.creditAmount).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {p.creditCurrency}</b>
                             <span className="muted">Settlement: {p.settlementCurrency}</span>
                           </div>
                           <div className="muted">Route: {p.route?.length ? p.route.map((id) => {

@@ -11,19 +11,12 @@ export function isWithinClearingHours(db, currency) {
 
   const simTimeMs = getSimTimeMs(db);
   const dt = new Date(simTimeMs);
+  const hour = dt.getUTCHours();
 
-  // Obtener hora en CET (UTC+1)
-  // Nota: esto no considera el horario de verano (CEST = UTC+2)
-  // Para una implementación más precisa, se podría usar una librería de zonas horarias
-  const utcHours = dt.getUTCHours();
-  const cetHour = (utcHours + 1) % 24;
-
-  // Model: opening hour inclusive, closing hour exclusive.
-  // If closeHour < openHour, treat as overnight window.
   const open = row.openHour;
   const close = row.closeHour;
 
   if (open === close) return true;
-  if (open < close) return cetHour >= open && cetHour < close;
-  return cetHour >= open || cetHour < close;
+  if (open < close) return hour >= open && hour < close;
+  return hour >= open || hour < close;
 }

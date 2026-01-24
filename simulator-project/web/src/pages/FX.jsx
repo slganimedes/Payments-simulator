@@ -49,7 +49,7 @@ export default function FX() {
         <div className="list">
           {sortedEvents.map((e) => (
             <div className="list-item" key={e.id}>
-              <div className="list-title">{e.fromAmount.toFixed(2)} {e.fromCurrency}{' -> '}{e.toAmount.toFixed(2)} {e.toCurrency}</div>
+              <div className="list-title">{Number(e.fromAmount).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {e.fromCurrency}{' -> '}{Number(e.toAmount).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {e.toCurrency}</div>
               <div className="list-meta">Bank: {e.bankName}</div>
               <div className="list-meta">Rate: {e.rate}</div>
               <div className="list-meta">Time: {new Date(e.createdAtMs).toLocaleString()}</div>
