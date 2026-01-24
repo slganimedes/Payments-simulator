@@ -5,7 +5,7 @@ import { applyRegularClientDelta, applyRegularClientDeltaClientOnly } from './ba
 import { findMinimumHopRoute } from './routing.js';
 import { validateClientCurrencyAvailability, getBankAvailableCurrencies } from './invariants.js';
 import { newId } from './ids.js';
-import { getBank, getClientBalance } from './accounts.js';
+import { getBank, getClientBalance, getOrCreateHouseClient } from './accounts.js';
 import { getNostro, adjustNostroAndMirrorVostro } from './nostroVostro.js';
 
 export function listPayments(db) {
@@ -70,10 +70,10 @@ export function createPaymentIntent(db, payload) {
     throw new Error('Payments must be between regular or house clients');
   }
 
-  // Validate: fromClient must have balance > 0 in debit currency
+  // Validate: fromClient must have sufficient balance in debit currency
   const fromBalance = getClientBalance(db, fromClient.id, payload.debitCurrency);
-  if (fromBalance.lte(0)) {
-    throw new Error(`Client has no funds in ${payload.debitCurrency}. Current balance: ${toMoneyString(fromBalance)}`);
+  if (fromBalance.lt(d(payload.debitAmount))) {
+    throw new Error(`Insufficient funds in ${payload.debitCurrency}. Balance: ${toMoneyString(fromBalance)}, Required: ${payload.debitAmount}`);
   }
 
   const toBank = db.prepare('SELECT id, baseCurrency FROM banks WHERE id = ?').get(toClient.bankId);
@@ -177,6 +177,13 @@ export function createPaymentIntent(db, payload) {
     }
   });
 
+  // Immediately debit sender and hold funds in bank's HOUSE account
+  if (fromClient.type !== 'HOUSE') {
+    const houseClient = getOrCreateHouseClient(db, { bankId: fromClient.bankId, createdAtMs: simNow });
+    applyRegularClientDeltaClientOnly(db, { clientId: fromClient.id, currency: payload.debitCurrency, delta: debitAmount.neg() });
+    applyRegularClientDeltaClientOnly(db, { clientId: houseClient.id, currency: payload.debitCurrency, delta: debitAmount });
+  }
+
   return { id };
 }
 
@@ -200,6 +207,14 @@ export function executePayment(db, paymentId) {
   const simNow = getSimTimeMs(db);
   const route = JSON.parse(payment.routeJson);
 
+  // Determine who holds the funds: HOUSE account (if sender is REGULAR) or sender itself (if sender is HOUSE)
+  const senderType = db.prepare('SELECT type FROM clients WHERE id = ?').get(payment.fromClientId);
+  const isHouseSender = senderType?.type === 'HOUSE';
+  const houseClient = isHouseSender
+    ? null
+    : db.prepare("SELECT id FROM clients WHERE bankId = ? AND type = 'HOUSE'").get(payment.fromBankId);
+  const holderId = isHouseSender ? payment.fromClientId : (houseClient?.id ?? payment.fromClientId);
+
   console.log(`[PAY] ${payment.id} | ${payment.fromClientId} → ${payment.toClientId} | ${payment.debitAmount} ${payment.debitCurrency} → ${payment.creditAmount} ${payment.creditCurrency} | settlement: ${payment.settlementCurrency} | route: ${route.join(' → ')}`);
 
   const tx = db.transaction(() => {
@@ -211,11 +226,11 @@ export function executePayment(db, paymentId) {
 
     console.log(`[PAY]   settlementAmount: ${settlementAmount.toFixed(2)} ${payment.settlementCurrency}`);
 
-    // FX at originating bank if needed: debitCurrency -> settlementCurrency
+    // FX at originating bank if needed: debitCurrency -> settlementCurrency (operates on HOUSE hold)
     if (payment.debitCurrency !== payment.settlementCurrency) {
       console.log(`[PAY]   origin FX: ${debitAmount.toFixed(2)} ${payment.debitCurrency} → ${settlementAmount.toFixed(2)} ${payment.settlementCurrency} @ ${payment.fromBankId}`);
-      applyRegularClientDelta(db, { clientId: payment.fromClientId, currency: payment.debitCurrency, delta: debitAmount.neg() });
-      applyRegularClientDelta(db, { clientId: payment.fromClientId, currency: payment.settlementCurrency, delta: settlementAmount });
+      applyRegularClientDelta(db, { clientId: holderId, currency: payment.debitCurrency, delta: debitAmount.neg() });
+      applyRegularClientDelta(db, { clientId: holderId, currency: payment.settlementCurrency, delta: settlementAmount });
 
       const fromBank = db.prepare('SELECT name FROM banks WHERE id = ?').get(payment.fromBankId);
       fxLogEvent(db, {
@@ -244,9 +259,9 @@ export function executePayment(db, paymentId) {
       });
     }
 
-    // 1) Move client balances without touching Nostro/Vostro
-    console.log(`[PAY]   transfer: debit ${payment.fromClientId} -${settlementAmount.toFixed(2)} ${payment.settlementCurrency}, credit ${payment.toClientId} +${creditAmount.toFixed(2)} ${payment.creditCurrency}`);
-    applyRegularClientDeltaClientOnly(db, { clientId: payment.fromClientId, currency: payment.settlementCurrency, delta: settlementAmount.neg() });
+    // 1) Debit HOUSE hold and credit beneficiary
+    console.log(`[PAY]   transfer: debit ${holderId} -${settlementAmount.toFixed(2)} ${payment.settlementCurrency}, credit ${payment.toClientId} +${creditAmount.toFixed(2)} ${payment.creditCurrency}`);
+    applyRegularClientDeltaClientOnly(db, { clientId: holderId, currency: payment.settlementCurrency, delta: settlementAmount.neg() });
     applyRegularClientDeltaClientOnly(db, { clientId: payment.toClientId, currency: payment.creditCurrency, delta: creditAmount });
 
     // 2) Interbank settlement in settlement currency
@@ -334,6 +349,12 @@ export function executePayment(db, paymentId) {
     console.log(`[PAY]   ✓ SETTLED ${payment.id}`);
   } catch (e) {
     console.log(`[PAY]   ✗ FAILED ${payment.id}: ${e.message ?? e}`);
+    // Refund: return held funds from HOUSE to sender
+    if (!isHouseSender && houseClient) {
+      const refundAmount = d(payment.debitAmount);
+      applyRegularClientDeltaClientOnly(db, { clientId: houseClient.id, currency: payment.debitCurrency, delta: refundAmount.neg() });
+      applyRegularClientDeltaClientOnly(db, { clientId: payment.fromClientId, currency: payment.debitCurrency, delta: refundAmount });
+    }
     failPayment(db, paymentId, String(e.message ?? e));
   }
 }

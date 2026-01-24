@@ -255,7 +255,17 @@ Este proyecto es de uso educativo.
 
 ## Versión
 
-**Versión 1.5** - Enero 2026
+**Versión 1.6** - Enero 2026
+
+### Características de la versión 1.6
+- **Retención inmediata de fondos (Hold)**: Al crear un pago, el saldo se debita inmediatamente del cliente y se deposita en la cuenta HOUSE del banco emisor, a la espera del procesamiento
+- **Refund automático en fallo**: Si el pago falla durante la ejecución, los fondos retenidos se devuelven automáticamente al cliente emisor
+- **Reloj sin zona horaria**: El reloj de simulación opera en UTC directo, sin conversiones CET. La hora mostrada es la hora usada para clearing
+- **Motor FIFO 1/segundo**: El engine procesa un pago por segundo en orden FIFO, en lugar de todos a la vez
+- **Separadores de miles**: Todas las cifras de saldo y montos usan formato con separadores de miles (es-ES)
+- **HKD como moneda de creación**: Añadido Hong Kong Dollar al selector de creación de bancos
+- **Layout de tarjetas de pago**: Debit a la izquierda, Credit centrado, Settlement a la derecha
+- **Scripts de instalación mejorados**: Detección automática del proyecto local antes de intentar clonar
 
 ### Características de la versión 1.5
 - **Nombres de clientes en historial de pagos**: Cada pago muestra `ClienteOrigen (Banco) → ClienteDestino (Banco)`
