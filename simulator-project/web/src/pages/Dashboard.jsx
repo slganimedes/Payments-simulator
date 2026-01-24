@@ -33,6 +33,7 @@ export default function Dashboard() {
   const [clock, setClock] = useState(null);
   const [form, setForm] = useState({ name: '', baseCurrency: 'USD' });
   const [error, setError] = useState('');
+  const [paymentPage, setPaymentPage] = useState({});
 
   async function refresh() {
     const [b, f, c, n, cl, p, ck] = await Promise.all([
@@ -214,30 +215,44 @@ export default function Dashboard() {
             <h2>Payments</h2>
             {paymentsByCreditCurrency.length === 0 ? <div className="muted">No payments yet.</div> : null}
             <div className="columns">
-              {paymentsByCreditCurrency.map(([currency, list]) => (
-                <div className="column" key={currency}>
-                  <div className="column-title">{currency}</div>
-                  {list.map((p) => (
-                    <div className="payment" key={p.id}>
-                      <div className="payment-top">
-                        <div className={`state state-${p.state.toLowerCase()}`}>{p.state}</div>
-                        <div className="muted">{new Date(p.createdAtMs).toLocaleTimeString()}</div>
+              {paymentsByCreditCurrency.map(([currency, list]) => {
+                const page = paymentPage[currency] ?? 0;
+                const totalPages = Math.ceil(list.length / 10);
+                const pageList = list.slice(page * 10, (page + 1) * 10);
+                return (
+                  <div className="column" key={currency}>
+                    <div className="column-title">{currency}</div>
+                    {pageList.map((p) => (
+                      <div className="payment" key={p.id}>
+                        <div className="payment-top">
+                          <div className={`state state-${p.state.toLowerCase()}`}>{p.state}</div>
+                          <div className="muted">{new Date(p.createdAtMs).toLocaleTimeString()}</div>
+                        </div>
+                        <div className="payment-body">
+                          <div className="muted">{p.fromClientName} ({p.fromBankName}) → {p.toClientName} ({p.toBankName})</div>
+                          <div><b>{p.creditAmount.toFixed(2)} {p.creditCurrency}</b></div>
+                          <div className="muted" style={{ display: 'flex', justifyContent: 'space-between' }}>
+                            <span>Debit: {p.debitAmount.toFixed(2)} {p.debitCurrency}</span>
+                            <span>Settlement: {p.settlementCurrency}</span>
+                          </div>
+                          <div className="muted">Route: {p.route?.length ? p.route.map((id) => {
+                            const name = bankNameById.get(id) ?? id;
+                            return p.fxAtBankIds?.includes(id) ? `${name} (FX)` : name;
+                          }).join(' → ') : '—'}</div>
+                          {p.failReason ? <div className="error">{p.failReason}</div> : null}
+                        </div>
                       </div>
-                      <div className="payment-body">
-                        <div className="muted">{p.fromClientName} ({p.fromBankName}) → {p.toClientName} ({p.toBankName})</div>
-                        <div><b>{p.creditAmount.toFixed(2)} {p.creditCurrency}</b></div>
-                        <div className="muted">Debit: {p.debitAmount.toFixed(2)} {p.debitCurrency}</div>
-                        <div className="muted">Settlement: {p.settlementCurrency}</div>
-                        <div className="muted">Route: {p.route?.length ? p.route.map((id) => {
-                          const name = bankNameById.get(id) ?? id;
-                          return p.fxAtBankIds?.includes(id) ? `${name} (FX)` : name;
-                        }).join(' → ') : '—'}</div>
-                        {p.failReason ? <div className="error">{p.failReason}</div> : null}
+                    ))}
+                    {totalPages > 1 && (
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '8px', fontSize: '12px' }}>
+                        <button className="btn" style={{ padding: '4px 8px', fontSize: '12px' }} disabled={page === 0} onClick={() => setPaymentPage((prev) => ({ ...prev, [currency]: page - 1 }))}>← Prev</button>
+                        <span className="muted">{page + 1}/{totalPages}</span>
+                        <button className="btn" style={{ padding: '4px 8px', fontSize: '12px' }} disabled={page >= totalPages - 1} onClick={() => setPaymentPage((prev) => ({ ...prev, [currency]: page + 1 }))}>Next →</button>
                       </div>
-                    </div>
-                  ))}
-                </div>
-              ))}
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </section>
         </div>
