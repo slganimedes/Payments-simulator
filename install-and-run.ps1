@@ -30,31 +30,42 @@ try {
 
 Write-Host ""
 
-# Directorio de instalación
-$installDir = "$env:USERPROFILE\PaymentSimulator"
+# Detectar si estamos dentro del proyecto (el script está junto a simulator-project/)
+$scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+$localProject = Join-Path $scriptDir "simulator-project"
 
-# Verificar si ya existe
-if (Test-Path $installDir) {
-    Write-Host "[INFO] El directorio ya existe. Actualizando..." -ForegroundColor Yellow
-    Set-Location $installDir
-    git pull
+if (Test-Path (Join-Path $localProject "package.json")) {
+    Write-Host "[INFO] Proyecto detectado en $scriptDir" -ForegroundColor White
+    $projectDir = $localProject
 }
 else {
-    # Clonar repositorio
-    Write-Host "[INFO] Clonando repositorio en $installDir..." -ForegroundColor White
-    git clone "https://github.com/slganimedes/Payments-simulator.git" $installDir
+    # Si no estamos en el proyecto, clonar o actualizar
+    $installDir = "$env:USERPROFILE\PaymentSimulator"
+    $remoteProject = Join-Path $installDir "simulator-project"
 
-    if ($LASTEXITCODE -ne 0) {
-        Write-Host "[ERROR] Error al clonar el repositorio." -ForegroundColor Red
-        Read-Host "Presiona Enter para salir"
-        exit 1
+    if (Test-Path (Join-Path $remoteProject "package.json")) {
+        Write-Host "[INFO] El directorio ya existe. Actualizando..." -ForegroundColor Yellow
+        Set-Location $installDir
+        git pull
+        $projectDir = $remoteProject
     }
+    else {
+        # Clonar repositorio
+        Write-Host "[INFO] Clonando repositorio en $installDir..." -ForegroundColor White
+        git clone "https://github.com/slganimedes/Payments-simulator.git" $installDir
 
-    Set-Location $installDir
+        if ($LASTEXITCODE -ne 0) {
+            Write-Host "[ERROR] Error al clonar el repositorio." -ForegroundColor Red
+            Read-Host "Presiona Enter para salir"
+            exit 1
+        }
+
+        $projectDir = $remoteProject
+    }
 }
 
 # Entrar al directorio del proyecto
-Set-Location (Join-Path $installDir "simulator-project")
+Set-Location $projectDir
 
 # Instalar dependencias
 Write-Host ""

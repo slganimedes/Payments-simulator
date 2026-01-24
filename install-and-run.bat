@@ -32,14 +32,22 @@ echo [INFO] Node.js version:
 node --version
 echo.
 
-:: Definir directorio de instalación
+:: Detectar si estamos dentro del proyecto (el script está junto a simulator-project/)
+set "SCRIPT_DIR=%~dp0"
+if exist "%SCRIPT_DIR%simulator-project\package.json" (
+    echo [INFO] Proyecto detectado en %SCRIPT_DIR%
+    set "PROJECT_DIR=%SCRIPT_DIR%simulator-project"
+    goto :install_deps
+)
+
+:: Si no estamos en el proyecto, clonar o actualizar
 set "INSTALL_DIR=%USERPROFILE%\PaymentSimulator"
 
-:: Verificar si el directorio ya existe
-if exist "%INSTALL_DIR%" (
+if exist "%INSTALL_DIR%\simulator-project\package.json" (
     echo [INFO] El directorio ya existe. Actualizando...
     cd /d "%INSTALL_DIR%"
     git pull
+    set "PROJECT_DIR=%INSTALL_DIR%\simulator-project"
     goto :install_deps
 )
 
@@ -53,10 +61,10 @@ if %errorlevel% neq 0 (
     exit /b 1
 )
 
-cd /d "%INSTALL_DIR%\simulator-project"
+set "PROJECT_DIR=%INSTALL_DIR%\simulator-project"
 
 :install_deps
-cd /d "%INSTALL_DIR%\simulator-project"
+cd /d "%PROJECT_DIR%"
 echo.
 echo [INFO] Instalando dependencias...
 call npm install
