@@ -193,7 +193,7 @@ export default function Dashboard() {
               ))}
             </div>
 
-            <form className="form" onSubmit={onCreateBank} style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginTop: '1rem' }}>
+            <form className="form" onSubmit={onCreateBank} style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginTop: '1rem', flexWrap: 'wrap' }}>
               <input
                 placeholder="Bank name"
                 value={form.name}
@@ -201,7 +201,7 @@ export default function Dashboard() {
                 style={{ flex: '1' }}
               />
               <select value={form.baseCurrency} onChange={(e) => setForm((f) => ({ ...f, baseCurrency: e.target.value }))}>
-                {['USD', 'EUR', 'GBP', 'CHF', 'JPY', 'MXN'].map((c) => (
+                {['USD', 'EUR', 'GBP', 'CHF', 'JPY', 'MXN', 'HKD'].map((c) => (
                   <option key={c} value={c}>{c}</option>
                 ))}
               </select>
