@@ -240,7 +240,7 @@ QUEUED → SETTLED  (éxito)
 QUEUED → FAILED   (error: fondos insuficientes, sin ruta, etc.)
 ```
 
-![Pago en estado QUEUED esperando horario de clearing](screenshots/09-pago-queued.png)
+![Pago en estado QUEUED esperando horario de clearing](screenshots/09-pago-encolado.png)
 
 ### Pagos con conversión FX
 
