@@ -255,7 +255,20 @@ Este proyecto es de uso educativo.
 
 ## Versión
 
-**Versión 1.2** - Enero 2026
+**Versión 1.5** - Enero 2026
+
+### Características de la versión 1.5
+- **Nombres de clientes en historial de pagos**: Cada pago muestra `ClienteOrigen (Banco) → ClienteDestino (Banco)`
+- **Botón Reset Payments**: Borra el historial de pagos sin afectar bancos, clientes ni saldos
+- **Auto-exchange toggles**: Dos botones para generar pagos automáticos cada 5 segundos:
+  - Domestic: pagos entre clientes de bancos con la misma divisa base
+  - Cross-FX: pagos cross-currency con un salto internacional directo
+- **Paginación de pagos**: 10 pagos por página con navegación prev/next por columna de divisa
+- **Layout mejorado en Payments**: Clientes 25%, Payments 75%
+- **Tarjetas de pago mejoradas**: Credit, Debit y Settlement en la misma línea; fecha dd/mm HH:MM sin segundos
+- **Paginación de clientes**: Lista de clientes con 10 por página, cuentas HOUSE al final
+- **Manual de usuario**: Documento MANUAL.md con guía paso a paso y placeholders para capturas
+- **Debug logging**: Registro detallado en consola de cada paso de ejecución de pagos
 
 ### Características de la versión 1.2
 - **Indicador FX en rutas de pago**: La ruta de cada pago muestra con etiqueta `(FX)` en qué banco se realizó la conversión de divisas
@@ -266,12 +279,6 @@ Este proyecto es de uso educativo.
 - **Pagos intrabancarios sin horario de cámara**: Los pagos entre clientes del mismo banco se procesan inmediatamente, sin esperar a la ventana de clearing de la divisa de liquidación
 
 ### Características de la versión 1.1
-- **Animaciones de pagos en el grafo**: Cuando un pago se liquida, una bolita animada recorre la ruta entre bancos
-  - Detecta transiciones QUEUED → SETTLED para activar animaciones
-  - Múltiples pagos animados simultáneamente cuando la ventana de clearing procesa la cola
-  - Filtro de pagos antiguos (>10 min en tiempo de simulación) para evitar animaciones en recarga
-- **Persistencia de zoom/pan**: El estado de zoom y posición del grafo se guarda en localStorage
-- **Controles del grafo**: Botones +/- para ajustar altura y modo pantalla completa
 - **Reorganización del proyecto**: Código fuente movido a `simulator-project/`
 - **Documentación de API**: Nuevo fichero `API.md` con documentación completa
 - **Validaciones mejoradas de pagos**:
