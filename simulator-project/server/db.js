@@ -181,6 +181,17 @@ export function resetAll(db) {
   tx();
 }
 
+export function resetPayments(db) {
+  const tx = db.transaction(() => {
+    db.exec(`
+      DELETE FROM fx_history;
+      DELETE FROM payment_messages;
+      DELETE FROM payments;
+    `);
+  });
+  tx();
+}
+
 export function resetClock(db) {
   db.prepare('UPDATE sim_clock SET simTimeMs = ?, tick = ?, pausedTick = ?, lastUpdateMs = ? WHERE id = 1')
     .run(SIM_EPOCH_MS, 60, 60, Date.now());

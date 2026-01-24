@@ -224,6 +224,7 @@ export default function Dashboard() {
                         <div className="muted">{new Date(p.createdAtMs).toLocaleTimeString()}</div>
                       </div>
                       <div className="payment-body">
+                        <div className="muted">{p.fromClientName} ({p.fromBankName}) → {p.toClientName} ({p.toBankName})</div>
                         <div><b>{p.creditAmount.toFixed(2)} {p.creditCurrency}</b></div>
                         <div className="muted">Debit: {p.debitAmount.toFixed(2)} {p.debitCurrency}</div>
                         <div className="muted">Settlement: {p.settlementCurrency}</div>

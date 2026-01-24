@@ -10,7 +10,7 @@ import { applyRegularClientDelta } from './domain/balances.js';
 import { d } from './domain/money.js';
 import { listNostros, createNostroWithMirrorVostro } from './domain/nostroVostro.js';
 import { listPayments, createPaymentIntent } from './domain/payments.js';
-import { resetAll, resetClock } from './db.js';
+import { resetAll, resetClock, resetPayments } from './db.js';
 
 export function buildApiRouter(db) {
   const r = express.Router();
@@ -155,6 +155,11 @@ export function buildApiRouter(db) {
 
   r.post('/admin/reset', (req, res) => {
     resetAll(db);
+    res.json({ ok: true });
+  });
+
+  r.post('/admin/reset-payments', (req, res) => {
+    resetPayments(db);
     res.json({ ok: true });
   });
 

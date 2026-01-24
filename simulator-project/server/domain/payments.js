@@ -10,6 +10,25 @@ import { getNostro, adjustNostroAndMirrorVostro } from './nostroVostro.js';
 
 export function listPayments(db) {
   const rows = db.prepare('SELECT * FROM payments ORDER BY createdAtMs DESC').all();
+  const clientCache = new Map();
+  const bankCache = new Map();
+
+  function getClientName(id) {
+    if (clientCache.has(id)) return clientCache.get(id);
+    const row = db.prepare('SELECT name FROM clients WHERE id = ?').get(id);
+    const name = row?.name ?? id;
+    clientCache.set(id, name);
+    return name;
+  }
+
+  function getBankName(id) {
+    if (bankCache.has(id)) return bankCache.get(id);
+    const row = db.prepare('SELECT name FROM banks WHERE id = ?').get(id);
+    const name = row?.name ?? id;
+    bankCache.set(id, name);
+    return name;
+  }
+
   return rows.map((p) => {
     const route = JSON.parse(p.routeJson);
     const fxAtBankIds = [];
@@ -21,6 +40,10 @@ export function listPayments(db) {
       toClientId: p.toClientId,
       fromBankId: p.fromBankId,
       toBankId: p.toBankId,
+      fromClientName: getClientName(p.fromClientId),
+      toClientName: getClientName(p.toClientId),
+      fromBankName: getBankName(p.fromBankId),
+      toBankName: getBankName(p.toBankId),
       debitCurrency: p.debitCurrency,
       creditCurrency: p.creditCurrency,
       debitAmount: Number(p.debitAmount),

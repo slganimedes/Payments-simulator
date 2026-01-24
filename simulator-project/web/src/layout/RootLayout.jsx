@@ -73,6 +73,15 @@ export default function RootLayout() {
     }
   }
 
+  async function onResetPayments() {
+    setError('');
+    try {
+      await apiPost('/api/admin/reset-payments', {});
+    } catch (e) {
+      setError(String(e.message ?? e));
+    }
+  }
+
   async function onResetClock() {
     setError('');
     try {
@@ -124,6 +133,7 @@ export default function RootLayout() {
         <div style={{ marginTop: 'auto', paddingTop: '16px' }}>
           <div style={{ display: 'grid', gap: '8px' }}>
             <button className="btn" onClick={onResetPositions} style={{ width: '100%' }}>Reset Positions</button>
+            <button className="btn" onClick={onResetPayments} style={{ width: '100%' }}>Reset Payments</button>
             <button className="btn" onClick={onResetClock} style={{ width: '100%' }}>Reset Clock</button>
             <button className="btn btn-danger" onClick={onResetAll} style={{ width: '100%' }}>RESET ALL</button>
           </div>
