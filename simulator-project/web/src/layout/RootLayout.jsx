@@ -20,6 +20,8 @@ function formatCETDateTime(ms) {
 export default function RootLayout() {
   const [clock, setClock] = useState(null);
   const [error, setError] = useState('');
+  const [autoDomestic, setAutoDomestic] = useState(false);
+  const [autoCross, setAutoCross] = useState(false);
 
   async function refreshClock() {
     try {
@@ -32,6 +34,10 @@ export default function RootLayout() {
 
   useEffect(() => {
     refreshClock();
+    apiGet('/api/admin/auto-exchange').then((data) => {
+      setAutoDomestic(data.domestic);
+      setAutoCross(data.crossCurrency);
+    }).catch(() => {});
     const t = setInterval(refreshClock, 1000);
     return () => clearInterval(t);
   }, []);
@@ -92,6 +98,26 @@ export default function RootLayout() {
     }
   }
 
+  async function onToggleDomestic() {
+    const next = !autoDomestic;
+    try {
+      await apiPost('/api/admin/auto-exchange/domestic', { enabled: next });
+      setAutoDomestic(next);
+    } catch (e) {
+      setError(String(e.message ?? e));
+    }
+  }
+
+  async function onToggleCross() {
+    const next = !autoCross;
+    try {
+      await apiPost('/api/admin/auto-exchange/cross-currency', { enabled: next });
+      setAutoCross(next);
+    } catch (e) {
+      setError(String(e.message ?? e));
+    }
+  }
+
   function onResetPositions() {
     localStorage.removeItem('bankNetworkPositions');
     localStorage.removeItem('bankNetworkZonePositions');
@@ -132,6 +158,21 @@ export default function RootLayout() {
 
         <div style={{ marginTop: 'auto', paddingTop: '16px' }}>
           <div style={{ display: 'grid', gap: '8px' }}>
+            <button
+              className={`btn ${autoDomestic ? 'btn-active' : ''}`}
+              onClick={onToggleDomestic}
+              style={{ width: '100%' }}
+            >
+              {autoDomestic ? '⏹ Domestic' : '▶ Domestic'}
+            </button>
+            <button
+              className={`btn ${autoCross ? 'btn-active' : ''}`}
+              onClick={onToggleCross}
+              style={{ width: '100%' }}
+            >
+              {autoCross ? '⏹ Cross-FX' : '▶ Cross-FX'}
+            </button>
+            <div style={{ borderTop: '1px solid var(--border)', margin: '4px 0' }}></div>
             <button className="btn" onClick={onResetPositions} style={{ width: '100%' }}>Reset Positions</button>
             <button className="btn" onClick={onResetPayments} style={{ width: '100%' }}>Reset Payments</button>
             <button className="btn" onClick={onResetClock} style={{ width: '100%' }}>Reset Clock</button>

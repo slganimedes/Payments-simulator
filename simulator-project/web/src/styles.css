@@ -173,6 +173,12 @@ input, select {
 
 .btn-danger:hover { background: rgba(239, 68, 68, 0.3); }
 
+.btn-active {
+  background: rgba(34, 197, 94, 0.22);
+  border-color: rgba(34, 197, 94, 0.5);
+}
+.btn-active:hover { background: rgba(34, 197, 94, 0.35); }
+
 .error {
   border: 1px solid rgba(239, 68, 68, 0.45);
   background: rgba(239, 68, 68, 0.10);

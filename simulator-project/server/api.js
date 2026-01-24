@@ -11,6 +11,10 @@ import { d } from './domain/money.js';
 import { listNostros, createNostroWithMirrorVostro } from './domain/nostroVostro.js';
 import { listPayments, createPaymentIntent } from './domain/payments.js';
 import { resetAll, resetClock, resetPayments } from './db.js';
+import {
+  startDomestic, stopDomestic, isDomesticRunning,
+  startCrossCurrency, stopCrossCurrency, isCrossCurrencyRunning
+} from './autoExchange.js';
 
 export function buildApiRouter(db) {
   const r = express.Router();
@@ -206,6 +210,27 @@ export function buildApiRouter(db) {
       tick: c.tick,
       isPaused: c.tick === 0
     });
+  });
+
+  r.get('/admin/auto-exchange', (req, res) => {
+    res.json({
+      domestic: isDomesticRunning(),
+      crossCurrency: isCrossCurrencyRunning()
+    });
+  });
+
+  r.post('/admin/auto-exchange/domestic', (req, res) => {
+    const { enabled } = req.body;
+    if (enabled) startDomestic(db);
+    else stopDomestic();
+    res.json({ domestic: isDomesticRunning() });
+  });
+
+  r.post('/admin/auto-exchange/cross-currency', (req, res) => {
+    const { enabled } = req.body;
+    if (enabled) startCrossCurrency(db);
+    else stopCrossCurrency();
+    res.json({ crossCurrency: isCrossCurrencyRunning() });
   });
 
   return r;
