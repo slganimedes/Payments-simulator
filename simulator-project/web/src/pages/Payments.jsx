@@ -19,6 +19,7 @@ export default function Payments() {
   const [error, setError] = useState('');
 
   const [paymentPage, setPaymentPage] = useState({});
+  const [clientPage, setClientPage] = useState(0);
 
   const [depositForm, setDepositForm] = useState({
     clientId: '',
@@ -53,7 +54,13 @@ export default function Payments() {
     return () => clearInterval(t);
   }, []);
 
-  const regularClients = useMemo(() => clients.filter((c) => c.type === 'REGULAR' || c.type === 'HOUSE'), [clients]);
+  const regularClients = useMemo(() => {
+    const filtered = clients.filter((c) => c.type === 'REGULAR' || c.type === 'HOUSE');
+    return filtered.sort((a, b) => {
+      if (a.type === b.type) return 0;
+      return a.type === 'REGULAR' ? -1 : 1;
+    });
+  }, [clients]);
 
   const bankById = useMemo(() => new Map(banks.map((b) => [b.id, b])), [banks]);
 
@@ -294,18 +301,18 @@ export default function Payments() {
       </section>
 
       <div style={{ display: 'flex', gap: '16px', gridColumn: '1 / -1' }}>
-        <section className="card" style={{ flex: '1 1 33%' }}>
+        <section className="card" style={{ flex: '1 1 25%', minWidth: 0 }}>
           <h2>Clients</h2>
           {regularClients.length === 0 ? <div className="muted">No regular clients yet.</div> : null}
 
           <div className="list">
-            {regularClients.map((c) => {
+            {regularClients.slice(clientPage * 10, (clientPage + 1) * 10).map((c) => {
               const bank = bankById.get(c.bankId);
               const currencies = availableCurrenciesForClient.get(c.id) ?? ['USD', 'EUR', 'GBP', 'CHF', 'JPY', 'MXN'];
               const balances = new Map((c.balances ?? []).map((b) => [b.currency, Number(b.amount)]));
               return (
                 <div className="list-item" key={c.id}>
-                  <div className="list-title">{bank?.name ?? c.bankId} · {c.name}</div>
+                  <div className="list-title">{bank?.name ?? c.bankId} · {c.name}{c.type === 'HOUSE' ? ' (H)' : ''}</div>
                   <div className="list-meta">Base: {bank?.baseCurrency ?? '—'}</div>
 
                   <div className="table">
@@ -320,9 +327,16 @@ export default function Payments() {
               );
             })}
           </div>
+          {Math.ceil(regularClients.length / 10) > 1 && (
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '8px', fontSize: '12px' }}>
+              <button className="btn" style={{ padding: '4px 8px', fontSize: '12px' }} disabled={clientPage === 0} onClick={() => setClientPage((p) => p - 1)}>← Prev</button>
+              <span className="muted">{clientPage + 1}/{Math.ceil(regularClients.length / 10)}</span>
+              <button className="btn" style={{ padding: '4px 8px', fontSize: '12px' }} disabled={clientPage >= Math.ceil(regularClients.length / 10) - 1} onClick={() => setClientPage((p) => p + 1)}>Next →</button>
+            </div>
+          )}
         </section>
 
-        <section className="card" style={{ flex: '2 1 66%' }}>
+        <section className="card" style={{ flex: '3 1 75%', minWidth: 0 }}>
           <h2>Payments</h2>
           {byCreditCurrency.length === 0 ? <div className="muted">No payments yet.</div> : null}
 
@@ -334,27 +348,32 @@ export default function Payments() {
               return (
                 <div className="column" key={currency}>
                   <div className="column-title">{currency}</div>
-                  {pageList.map((p) => (
-                    <div className="payment" key={p.id}>
-                      <div className="payment-top">
-                        <div className={`state state-${p.state.toLowerCase()}`}>{p.state}</div>
-                        <div className="muted">{new Date(p.createdAtMs).toLocaleTimeString()}</div>
-                      </div>
-                      <div className="payment-body">
-                        <div className="muted">{p.fromClientName} ({p.fromBankName}) → {p.toClientName} ({p.toBankName})</div>
-                        <div><b>{p.creditAmount.toFixed(2)} {p.creditCurrency}</b></div>
-                        <div className="muted" style={{ display: 'flex', justifyContent: 'space-between' }}>
-                          <span>Debit: {p.debitAmount.toFixed(2)} {p.debitCurrency}</span>
-                          <span>Settlement: {p.settlementCurrency}</span>
+                  {pageList.map((p) => {
+                    const dt = new Date(p.createdAtMs);
+                    const dateStr = dt.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit' });
+                    const timeStr = dt.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+                    return (
+                      <div className="payment" key={p.id}>
+                        <div className="payment-top">
+                          <div className={`state state-${p.state.toLowerCase()}`}>{p.state}</div>
+                          <div className="muted">{dateStr} {timeStr}</div>
                         </div>
-                        <div className="muted">Route: {p.route?.length ? p.route.map((id) => {
-                          const name = bankNameById.get(id) ?? id;
-                          return p.fxAtBankIds?.includes(id) ? `${name} (FX)` : name;
-                        }).join(' → ') : '—'}</div>
-                        {p.failReason ? <div className="error">{p.failReason}</div> : null}
+                        <div className="payment-body">
+                          <div className="muted">{p.fromClientName} ({p.fromBankName}) → {p.toClientName} ({p.toBankName})</div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                            <b>{p.creditAmount.toFixed(2)} {p.creditCurrency}</b>
+                            <span className="muted">Debit: {p.debitAmount.toFixed(2)} {p.debitCurrency}</span>
+                            <span className="muted">Settlement: {p.settlementCurrency}</span>
+                          </div>
+                          <div className="muted">Route: {p.route?.length ? p.route.map((id) => {
+                            const name = bankNameById.get(id) ?? id;
+                            return p.fxAtBankIds?.includes(id) ? `${name} (FX)` : name;
+                          }).join(' → ') : '—'}</div>
+                          {p.failReason ? <div className="error">{p.failReason}</div> : null}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                   {totalPages > 1 && (
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '8px', fontSize: '12px' }}>
                       <button className="btn" style={{ padding: '4px 8px', fontSize: '12px' }} disabled={page === 0} onClick={() => setPaymentPage((prev) => ({ ...prev, [currency]: page - 1 }))}>← Prev</button>

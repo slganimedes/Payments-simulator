@@ -222,27 +222,32 @@ export default function Dashboard() {
                 return (
                   <div className="column" key={currency}>
                     <div className="column-title">{currency}</div>
-                    {pageList.map((p) => (
-                      <div className="payment" key={p.id}>
-                        <div className="payment-top">
-                          <div className={`state state-${p.state.toLowerCase()}`}>{p.state}</div>
-                          <div className="muted">{new Date(p.createdAtMs).toLocaleTimeString()}</div>
-                        </div>
-                        <div className="payment-body">
-                          <div className="muted">{p.fromClientName} ({p.fromBankName}) → {p.toClientName} ({p.toBankName})</div>
-                          <div><b>{p.creditAmount.toFixed(2)} {p.creditCurrency}</b></div>
-                          <div className="muted" style={{ display: 'flex', justifyContent: 'space-between' }}>
-                            <span>Debit: {p.debitAmount.toFixed(2)} {p.debitCurrency}</span>
-                            <span>Settlement: {p.settlementCurrency}</span>
+                    {pageList.map((p) => {
+                      const dt = new Date(p.createdAtMs);
+                      const dateStr = dt.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit' });
+                      const timeStr = dt.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+                      return (
+                        <div className="payment" key={p.id}>
+                          <div className="payment-top">
+                            <div className={`state state-${p.state.toLowerCase()}`}>{p.state}</div>
+                            <div className="muted">{dateStr} {timeStr}</div>
                           </div>
-                          <div className="muted">Route: {p.route?.length ? p.route.map((id) => {
-                            const name = bankNameById.get(id) ?? id;
-                            return p.fxAtBankIds?.includes(id) ? `${name} (FX)` : name;
-                          }).join(' → ') : '—'}</div>
-                          {p.failReason ? <div className="error">{p.failReason}</div> : null}
+                          <div className="payment-body">
+                            <div className="muted">{p.fromClientName} ({p.fromBankName}) → {p.toClientName} ({p.toBankName})</div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                              <b>{p.creditAmount.toFixed(2)} {p.creditCurrency}</b>
+                              <span className="muted">Debit: {p.debitAmount.toFixed(2)} {p.debitCurrency}</span>
+                              <span className="muted">Settlement: {p.settlementCurrency}</span>
+                            </div>
+                            <div className="muted">Route: {p.route?.length ? p.route.map((id) => {
+                              const name = bankNameById.get(id) ?? id;
+                              return p.fxAtBankIds?.includes(id) ? `${name} (FX)` : name;
+                            }).join(' → ') : '—'}</div>
+                            {p.failReason ? <div className="error">{p.failReason}</div> : null}
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                     {totalPages > 1 && (
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '8px', fontSize: '12px' }}>
                         <button className="btn" style={{ padding: '4px 8px', fontSize: '12px' }} disabled={page === 0} onClick={() => setPaymentPage((prev) => ({ ...prev, [currency]: page - 1 }))}>← Prev</button>
