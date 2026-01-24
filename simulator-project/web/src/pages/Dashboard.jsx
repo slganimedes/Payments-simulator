@@ -180,12 +180,12 @@ export default function Dashboard() {
                   <div className="list-title">
                     {b.name} <span className="muted">({b.baseCurrency})</span>
                   </div>
-                  <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginTop: '8px' }}>
+                  <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', marginTop: '4px' }}>
                     {(bankTotals.get(b.id)?.currencies ?? [b.baseCurrency]).map((cur) => (
-                      <div key={cur} className="badge" style={{ padding: '8px 12px', fontSize: '18px' }}>
+                      <div key={cur} className="badge" style={{ padding: '4px 8px', fontSize: '12px' }}>
                         <span style={{ fontWeight: '700' }}>{cur}</span>
                         {' '}
-                        <span style={{ fontWeight: '650' }}>{Number(bankTotals.get(b.id)?.totals?.get(cur) ?? 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                        <span style={{ fontWeight: '600' }}>{Number(bankTotals.get(b.id)?.totals?.get(cur) ?? 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                       </div>
                     ))}
                   </div>
